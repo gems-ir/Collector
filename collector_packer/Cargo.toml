@@ -1,0 +1,22 @@
+[package]
+name = "collector_packer"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+repository.workspace = true
+keywords.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+collector_engine = { path="../collector_engine" }
+
+chrono = "0.4.41"
+log = "0.4.27"
+rust-embed = { version = "8.7.2", features = ["tokio","include-exclude"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+simplelog = "0.12.2"
+sysinfo = "0.35.2"
+tokio = { version = "1.46.0", features = ["full"] }
