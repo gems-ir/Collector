@@ -26,12 +26,14 @@ If you want to create a binary with pre-configuration, fill with your settings i
 Ater that, run this following command:
 
 ```bash
+cd Collector
+git clone https://github.com/gems-ir/Ressources.git
 cargo build --bin collector_packer --release
 ```
 
 ### Build under Linux
 
-It's able to build rust project under linux to windows.
+It's able to build rust project under Linux for Windows OS.
 To do that execute the following command 
 ```bash
 apt-get install gcc-mingw-w64-x86-64 -y
@@ -87,7 +89,7 @@ Options:
 
 ## 👨‍💻 Features
 
-- [ ] Collect file in low level
+- [X] Collect file in low level
 - [X] VSS (Collect from volume shadow copy)
 - [X] Add ZIP password
 - [X] Emebed config file and ressources to execute in click and lauch binary.

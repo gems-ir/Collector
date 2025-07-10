@@ -25,9 +25,9 @@ struct Config {
 }
 
 #[derive(Embed)]
-#[folder = "../Resources/"]
+#[folder = "../Ressources"]
 #[include = "**/*.yaml"]
-struct Assets;
+struct Asset;
 
 #[tokio::main]
 async fn main() {
@@ -73,16 +73,16 @@ async fn main() {
     info!("{}","=".repeat(50));
 
 
-    info!("Parse yaml resources files");
+    info!("Start of yaml resource files analysis");
     if conf.resources_list_artefact.is_empty(){
         panic!("\"resources_list_artefact\" is empyty");
     }
-    let list_yaml_file: Vec<String> = Assets::iter().map(|e| e.into_owned()).collect();
-    let get_raw_yaml: Vec<String> = list_yaml_file.iter().map(|e|  from_utf8(&Assets::get(e).unwrap().data.into_owned()).unwrap().to_string()).collect();
+    let list_yaml_file: Vec<String> = Asset::iter().map(|e| e.into_owned()).collect();
+    let get_raw_yaml: Vec<String> = list_yaml_file.iter().map(|e|  from_utf8(&Asset::get(e).unwrap().data.into_owned()).unwrap().to_string()).collect();
     let mut parser_obj: YamlParser = YamlParser::init();
     let doc_artifacts: Vec<YamlArtifact> = parser_obj.get_struct_from_raw(list_yaml_file ,get_raw_yaml);
     let list_artifacts: Vec<String> = parser_obj.select_artifact(conf.resources_list_artefact, doc_artifacts);
-    info!("End to parse yaml resources files");
+    info!("End of yaml resource file analysis");
 
     // Start collect
     info!("Start to collect artifact");
@@ -95,7 +95,7 @@ async fn main() {
         info!("Start to collect artifact from VSS");
         let vss_obj = CollectVss::new(conf.source_folder, conf.destination_folder, list_artifacts.clone());
         vss_obj.collect().await;
-        info!("End to collect artifact from vss");
+        info!("End to collect artifact from VSS");
     }
 
     // zip
@@ -104,11 +104,11 @@ async fn main() {
         let mut zip_pass_option: Option<String> = None;
         if conf.zip_pass.len() != 0{
             zip_pass_option = Some(conf.zip_pass);
-        } 
+        }
         let _result = collector_obj.zip(zip_pass_option).await;
         info!("End to zip output directory");
     }
 
     let elapsed_time = now.elapsed();
-    info!("Running took {} seconds.", elapsed_time.as_secs());
+    info!("The execution took {} seconds.", elapsed_time.as_secs());
 }

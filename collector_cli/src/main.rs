@@ -109,19 +109,19 @@ async fn main(){
     info!("{}","=".repeat(50));
     info!("Source of artifact: \"{}\"",src_string);
     info!("Destination of artifact: \"{}\"",dst_string);
-    info!("List of resources collect: {:?}",args.resources);
-    info!("Path of getting resources files: \"{}\"",args.path_resources);
+    info!("List of resources collected: {:?}",args.resources);
+    info!("Access path to resource files: \"{}\"",args.path_resources);
     info!("Output file log: \"{}\"",&name_log_file);
     info!("{}","=".repeat(50));
 
 
     // Parse yaml files in resources folder
-    info!("Parse yaml resources files");
+    info!("Start of yaml resource files analysis ");
     let arg_resources = args.resources;
     let mut parser_obj: YamlParser = YamlParser::new(args.path_resources);
     let doc_artifacts: Vec<YamlArtifact> = parser_obj.get_doc_struct().await;
     let list_artifacts: Vec<String> = parser_obj.select_artifact(arg_resources, doc_artifacts);
-    info!("End to parse yaml resources files");
+    info!("End of yaml resource file analysis");
     
     
     // Start collect
@@ -136,7 +136,7 @@ async fn main(){
         info!("Start to collect artifact from VSS");
         let vss_obj = CollectVss::new(src_string.clone(),dst_string,list_artifacts.clone());
         vss_obj.collect().await;
-        info!("End to collect artifact from vss");
+        info!("End to collect artifact from VSS");
     }
 
     // zip if need
@@ -147,6 +147,6 @@ async fn main(){
     }
 
     let elapsed_time = now.elapsed();
-    info!("Running took {} seconds.", elapsed_time.as_secs());
+    info!("The execution took {} seconds.", elapsed_time.as_secs());
 
 }

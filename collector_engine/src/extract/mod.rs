@@ -19,7 +19,7 @@ pub async fn try_filesystem(source: PathBuf, dest_file: &mut File) -> Result<()>
 	dest_file.write_all(&contents).await?;
 	match dest_file.write_all(&contents).await {
 		Ok(_inf) => {
-			info!("{}",get_source_string);
+			info!("A file has been recover: {}",get_source_string);
 			Ok(())
 		},
 		Err(err) => {

@@ -17,4 +17,4 @@ simplelog = {version="0.12.2", features=["termcolor"]}
 log = "0.4.21"
 tokio = { version="1.35.1", features = ["full"] }
 chrono = "0.4.38"
-sysinfo = "0.30.11"
+sysinfo = "0.35.2"
