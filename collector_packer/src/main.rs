@@ -25,7 +25,7 @@ struct Config {
 }
 
 #[derive(Embed)]
-#[folder = "../Ressources"]
+#[folder = "../Resources"]
 #[include = "**/*.yaml"]
 struct Asset;
 

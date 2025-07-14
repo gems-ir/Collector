@@ -8,11 +8,11 @@ pub struct ArgsCollector{
     #[command(subcommand)]
     pub command: Option<ResourcesCommand>,
 
-    /// The source of collecting artifact.
+    /// The source path of collecting artifact.
     #[arg(short,long, default_value="C:\\")]
     pub source: String,
 
-    /// The destination of collecting artifact. 
+    /// The destination path of collecting artifact.
     #[arg(short,long, default_value=".\\out\\")]
     pub destination: String,
 

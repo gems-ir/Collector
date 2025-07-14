@@ -2,7 +2,7 @@
 
 This tool can collect different artifact on running system.
 
-Like a kape but faster, more secure and open source in rust 🦀.
+Like a Kape but faster, more secure and open source in rust 🦀.
 
 ## 🏗️ Build Poject
 
@@ -20,57 +20,61 @@ Or build in production mode:
 cargo build --release --bin collector_cli
 ```
 
+### Resources
+
+You can download the collection resources here: [https://github.com/gems-ir/Resources.git](https://github.com/gems-ir/Resources.git) 
+
 ### Build packer
 
 If you want to create a binary with pre-configuration, fill with your settings inside the "collector_packer_config.json" file.
-Ater that, run this following command:
+Then, run the following command:
 
 ```bash
 cd Collector
-git clone https://github.com/gems-ir/Ressources.git
+git clone https://github.com/gems-ir/Resources.git
 cargo build --bin collector_packer --release
 ```
 
 ### Build under Linux
 
-It's able to build rust project under Linux for Windows OS.
-To do that execute the following command 
+It is possible to build the rust project under Linux for Windows OS.
+To do this, run the following command
 ```bash
 apt-get install gcc-mingw-w64-x86-64 -y
 apt-get install gcc -y
 apt-get install build-essential -y
 rustup target add x86_64-pc-windows-gnu
 ```
-after that you can build the project for example:
+after whcih you can build the project for example:
 ```bash
 cargo build --target x86_64-pc-windows-gnu --bin collector_cli --release
 ```
 
 ## Run collector
 
-The project is build to easy to run.
-You can just start the binary and the process go to start.
+The project is designed to be easy to run.
+You can simply launch the binary and the process will start.
 
 ## 🆘 Help command
 
 ```bash
-This tool was an artifact collector fast and secure. It can collect low level files.
+This tool was an artefact collector fast and secure. It can collect low level files.
 
 Usage: collector_cli.exe [OPTIONS] [COMMAND]
 
 Commands:
-  ressources  Ressource list options
-  help        Print this message or the help of the given subcommand(s)
+  resources  Resource list options
+  help       Print this message or the help of the given subcommand(s)
 
 Options:
   -s, --source <SOURCE>
-          The source of collecting artifact [default: C:\]
+          The source path of collecting artifact [default: C:\]
   -d, --destination <DESTINATION>
-          The destination of collecting artifact [default: .\out\]
-  -r, --ressources <RESSOURCES>
-          Ressources selection. You can list with "ressources" command. Exemple: MFT,Prefetch,EVTX [default: All]
-  -p, --path-ressources <PATH_RESSOURCES>
-          Path to artifact resources [default: .\Ressources\]
+          The destination path of collecting artifact [default: .\out\]
+  -r, --resources <RESOURCES>
+          Resources selection. You can list with "resources" command. Exemple: MFT,Prefetch,EVTX [default: All]
+  -p, --path-resources <PATH_RESOURCES>
+          Path to artifact resources [default: .\Resources\]
       --zip
           Zip the output directory
       --pass <PASS>
@@ -89,9 +93,9 @@ Options:
 
 ## 👨‍💻 Features
 
-- [X] Collect file in low level
+- [X] Low-level file collection
 - [X] VSS (Collect from volume shadow copy)
 - [X] Add ZIP password
-- [X] Emebed config file and ressources to execute in click and lauch binary.
+- [X] Emebed config file and resources to execute in click and lauch binary.
 - [ ] Adaptive collect
 - [ ] GUI
