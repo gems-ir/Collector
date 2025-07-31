@@ -1,9 +1,8 @@
-
-use std::path::Path;
-use tokio::fs::{File,OpenOptions};
-use serde::Serialize;
-use csv_async::{AsyncWriterBuilder,AsyncSerializer,AsyncReader};
 use chrono::Utc;
+use csv_async::{AsyncReader, AsyncSerializer, AsyncWriterBuilder};
+use serde::Serialize;
+use std::path::Path;
+use tokio::fs::{File, OpenOptions};
 
 #[derive(Debug, Serialize, Clone)]
 pub struct CsvLogItem{
@@ -30,11 +29,11 @@ impl Default for CsvLogItem {
 	}
 }
 
-pub struct CsvLog{
+pub struct CsvLogFile{
 	csv_writer: AsyncSerializer<File>,
 }
 
-impl CsvLog{
+impl CsvLogFile{
 	pub async fn new(dst_file: String) -> Self {
 		let csv_file = OpenOptions::new()
 			.create(true)
@@ -46,11 +45,11 @@ impl CsvLog{
 		if Self::check_has_headers(&dst_file).await{
 			let mut try_build = AsyncWriterBuilder::new();
 			let _try_has_header = try_build.has_headers(false);
-			CsvLog{
+			CsvLogFile{
 				csv_writer: try_build.create_serializer(csv_file),
 			}
 		}else{
-			CsvLog{
+			CsvLogFile{
 				csv_writer: AsyncWriterBuilder::new().create_serializer(csv_file),
 			}
 		}

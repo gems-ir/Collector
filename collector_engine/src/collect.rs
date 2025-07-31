@@ -29,8 +29,8 @@ impl Collect{
 		let csv_filename = create_writer.get_filepath_as_str("Collector_copy.csv".into());
 		let _create_csv = create_writer.create_file("Collector_copy.csv".into()).await;
 		Collect { 
-			src: src.to_string(), 
-			dst: dst.to_string(), 
+			src,
+			dst,
 			artifacts_glob,
 			writer: create_writer,
 			vss_item: None,
@@ -170,7 +170,7 @@ impl Collect{
 		let mtime = FileTime::from_last_modification_time(&metadata);
 		let atime = FileTime::from_last_access_time(&metadata);
 
-		log_item.modfified_time = mtime.to_string();
+		log_item.modfied_time = mtime.to_string();
 		log_item.access_time = atime.to_string();
 		log_item.from_ntfs = from_ntfs;
 

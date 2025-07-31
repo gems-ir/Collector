@@ -1,21 +1,22 @@
 mod list_parse;
 mod args;
 
-use args::*; 
-use list_parse::ArtifactListing;
-use collector_engine::collect::Collect;
-use collector_engine::parser::{YamlParser, YamlArtifact};
-use collector_engine::collectvss::CollectVss;
-use std::fs::File;
+use args::*;
+use chrono::Utc;
 use clap::Parser;
+use collector_core::resource::{YamlArtifact, YamlParser};
+#[cfg(target_os = "windows")]
+use collector_core::windows_vss::CollectVss;
+use collector_core::Collect;
+use list_parse::ArtifactListing;
 use log::*;
 use simplelog::*;
-use std::time;
-use chrono::Utc;
-use sysinfo::System;
+use std::fs::File;
 use std::panic;
+use std::time;
+use sysinfo::System;
 
-fn custom_panic_hook(){
+fn custom_panic_hook() {
     panic::set_hook(Box::new(|info| {
         // Check if the panic has a message
         if let Some(s) = info.payload().downcast_ref::<&str>() {
@@ -27,8 +28,8 @@ fn custom_panic_hook(){
 }
 
 #[tokio::main]
-async fn main(){
-    custom_panic_hook();
+async fn main() {
+    // custom_panic_hook();
     // Argument parser
     let args = ArgsCollector::parse();
     let src_string = args.source;
@@ -40,7 +41,7 @@ async fn main(){
 
 
     if args.command.is_some() {
-        let args_unwrap = args.command.unwrap(); 
+        let args_unwrap = args.command.unwrap();
         match args_unwrap {
             ResourcesCommand::Resources(listing) => {
                 let parser_obj: YamlParser = YamlParser::new(args.path_resources.clone());
@@ -48,22 +49,28 @@ async fn main(){
                 let load_art_list = ArtifactListing::load(doc_artifacts);
                 match listing.command {
                     ListResources::Targets => {
-                        for name in load_art_list.names_pa(){
-                            println!("{}",name);
+                        for name in load_art_list.names_pa() {
+                            println!("{}", name);
                         }
-                        ;return},
+                        ;
+                        return;
+                    }
                     ListResources::Groups => {
-                        for name in load_art_list.names_gr(){
-                            println!("{}",name);
+                        for name in load_art_list.names_gr() {
+                            println!("{}", name);
                         }
-                        ;return},
+                        ;
+                        return;
+                    }
                     ListResources::Categories => {
-                        for name in load_art_list.list_categories(){
-                            println!("{}",name);
+                        for name in load_art_list.list_categories() {
+                            println!("{}", name);
                         }
-                        ;return},
+                        ;
+                        return;
+                    }
                 };
-            },
+            }
         }
     }
 
@@ -71,16 +78,16 @@ async fn main(){
         .set_time_format_rfc3339()
         .add_filter_ignore_str("collector_engine::collect")
         .build();
-    if verbose{     
+    if verbose {
         config = ConfigBuilder::new()
             .set_time_format_rfc3339()
             .build();
     }
     let get_time = Utc::now().timestamp().to_string();
     let get_hostname = System::host_name().unwrap();
-    let name_log_file = format!("collector_{}_{}.log",get_hostname,get_time);
+    let name_log_file = format!("collector_{}_{}.log", get_hostname, get_time);
     // logger
-    if get_logging {        
+    if get_logging {
         CombinedLogger::init(vec![
             TermLogger::new(
                 LevelFilter::Info,
@@ -94,7 +101,7 @@ async fn main(){
                 File::create(&name_log_file).unwrap(),
             ),
         ]).unwrap();
-    }else{
+    } else {
         CombinedLogger::init(vec![
             WriteLogger::new(
                 LevelFilter::Info,
@@ -103,7 +110,7 @@ async fn main(){
             ),
         ]).unwrap();
     }
-    
+
     let now = time::Instant::now();
 
     info!("{}","=".repeat(50));
@@ -122,25 +129,27 @@ async fn main(){
     let doc_artifacts: Vec<YamlArtifact> = parser_obj.get_doc_struct().await;
     let list_artifacts: Vec<String> = parser_obj.select_artifact(arg_resources, doc_artifacts);
     info!("End of yaml resource file analysis");
-    
-    
+
+
     // Start collect
     info!("Start to collect artifact");
-    let mut collector_obj = Collect::new(src_string.clone(),dst_string.clone(),list_artifacts.clone()).await;
+    let mut collector_obj = Collect::new(src_string.clone(), dst_string.clone(), list_artifacts.clone()).await;
     let _collector_obj_start = collector_obj.start().await;
     info!("End to collect artifact");
 
     // Start collect vss
+    #[cfg(target_os = "windows")]
     let if_vss: bool = args.vss;
-    if if_vss{
+    #[cfg(target_os = "windows")]
+    if if_vss {
         info!("Start to collect artifact from VSS");
-        let vss_obj = CollectVss::new(src_string.clone(),dst_string,list_artifacts.clone());
+        let vss_obj = CollectVss::new(src_string.clone(), dst_string, list_artifacts.clone());
         vss_obj.collect().await;
         info!("End to collect artifact from VSS");
     }
 
-    // zip if need
-    if zip_name{
+    // zip if it's need
+    if zip_name {
         info!("Start to zip output directory");
         let _result = collector_obj.zip(zip_password).await;
         info!("End to zip output directory");
@@ -148,5 +157,4 @@ async fn main(){
 
     let elapsed_time = now.elapsed();
     info!("The execution took {} seconds.", elapsed_time.as_secs());
-
 }

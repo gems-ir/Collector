@@ -10,7 +10,8 @@ keywords.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-collector_engine = { path="../collector_engine" }
+#collector_engine = { path="../collector_engine" }
+collector_core = { path = "../collector_core" }
 
 chrono = "0.4.41"
 log = "0.4.27"

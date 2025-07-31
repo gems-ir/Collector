@@ -35,6 +35,7 @@ pub struct ArgsCollector{
     pub pass: Option<String>,
 
     /// Collect from vss. (longer)
+    #[cfg(target_os = "windows")]
     #[arg(long)]
     pub vss: bool,
 
