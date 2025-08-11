@@ -40,9 +40,7 @@ cargo build --bin collector_packer --release
 It is possible to build the rust project under Linux for Windows OS.
 To do this, run the following command
 ```bash
-apt-get install gcc-mingw-w64-x86-64 -y
-apt-get install gcc -y
-apt-get install build-essential -y
+apt-get install gcc-mingw-w64-x86-64 gcc build-essential -y
 rustup target add x86_64-pc-windows-gnu
 ```
 after whcih you can build the project for example:

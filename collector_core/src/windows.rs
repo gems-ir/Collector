@@ -15,26 +15,26 @@ use tokio::io::AsyncReadExt;
 
 
 pub struct Collect {
-    pub src: String,
-    pub dst: String,
-    pub artifacts_glob: Vec<String>,
+    pub source_directory: String,
+    pub destination_directory: String,
+    pub artifact_patterns: Vec<String>,
     writer: Writer,
-    vss_item: Option<VSSObj>,
-    csv_copy: CsvLogFile,
+    vss_snapshot: Option<VSSObj>,
+    csv_logger: CsvLogFile,
 }
 
 impl Collect {
-    pub async fn new(src: String, dst: String, artifacts_glob: Vec<String>) -> Collect {
-        let create_writer: Writer = Writer::new(dst.clone());
-        let csv_filename = create_writer.get_filepath_as_str("Collector_copy.csv".into());
-        let _create_csv = create_writer.create_file("Collector_copy.csv".into()).await;
+    pub async fn new(src: String, dst: String, patterns: Vec<String>) -> Collect {
+        let writer = Writer::new(dst.clone());
+        let csv_filename = writer.get_filepath_as_str("Collector_copy.csv".into());
+        let _ = writer.create_file("Collector_copy.csv".into()).await;
         Collect {
-            src,
-            dst,
-            artifacts_glob,
-            writer: create_writer,
-            vss_item: None,
-            csv_copy: CsvLogFile::new(csv_filename).await,
+            source_directory: src,
+            destination_directory: dst,
+            artifact_patterns: patterns,
+            writer,
+            vss_snapshot: None,
+            csv_logger: CsvLogFile::new(csv_filename).await,
         }
     }
 
@@ -42,14 +42,14 @@ impl Collect {
         if !is_admin() {
             panic!("You need to run as Administrator!");
         }
-        for artifact in self.artifacts_glob.clone() {
-            let mut artifact_element = artifact.to_string();
-            if artifact_element.starts_with("\\") {
-                artifact_element.remove(0);
+        for pattern in self.artifact_patterns.clone() {
+            let mut normalized_pattern = pattern.to_string();
+            if normalized_pattern.starts_with("\\") {
+                normalized_pattern.remove(0);
             }
 
-            let src_path: PathBuf = FormatSource::from(&self.src).to_path().join(artifact_element);
-            let source_with_artifact_out: &str = src_path.to_str().expect("Invalid path for artifact");
+            let source_path: PathBuf = FormatSource::from(&self.source_directory).to_path().join(normalized_pattern);
+            let source_with_artifact_out: &str = source_path.to_str().expect("Invalid path for artifact");
 
             for entry in Self::fetch_entries(&source_with_artifact_out) {
                 if let Err(e) = self.process_entry(entry).await {
@@ -62,11 +62,11 @@ impl Collect {
 
     /// Process a single entry
     async fn process_entry(&mut self, mut entry: PathBuf) -> Result<()> {
-        let mod_entry = self.modify_entry_path(entry.to_str().unwrap().to_string());
-        let mut output_file: File = self.writer.create_file(mod_entry.clone()).await;
+        let modified_entry = self.modify_entry_path(entry.to_str().unwrap().to_string());
+        let mut output_file: File = self.writer.create_file(modified_entry.clone()).await;
 
         // Filesystem approach
-        if self.process_filesystem(&mut entry, &mut output_file, mod_entry.clone())
+        if self.process_filesystem(&mut entry, &mut output_file, modified_entry.clone())
             .await
             .is_ok()
         {
@@ -74,7 +74,7 @@ impl Collect {
         }
 
         // NTFS approach
-        self.process_ntfs(&entry.clone(), &mut output_file, mod_entry.clone()).await
+        self.process_ntfs(&entry.clone(), &mut output_file, modified_entry.clone()).await
     }
 
     /// Process file using filesystem
@@ -82,11 +82,11 @@ impl Collect {
         &mut self,
         to_entry: &mut PathBuf,
         output_file: &mut File,
-        mod_entry: String,
+        modified_entry: String,
     ) -> Result<(), ()> {
         if try_filesystem(to_entry.clone(), output_file).await.is_ok() {
-            let filepath_art = self.writer.get_filepath_as_str(mod_entry.clone());
-            self.write_csv_row(mod_entry, filepath_art.to_string(), false).await;
+            let destination_path = self.writer.get_filepath_as_str(modified_entry.clone());
+            self.write_csv_row(modified_entry, destination_path.to_string(), false).await;
             return Ok(());
         }
         Err(())
@@ -97,44 +97,44 @@ impl Collect {
         &mut self,
         to_entry: &PathBuf,
         output_file: &mut File,
-        mod_entry: String,
+        modified_entry: String,
     ) -> Result<(), anyhow::Error> {
-        let item = self.vss_item.clone();
-        let path = if let Some(_) = item {
-            Self::adjust_path_for_ntfs(to_entry, &self.src)
+        let snapshot = self.vss_snapshot.clone();
+        let path = if let Some(_) = snapshot {
+            Self::adjust_path_for_ntfs(to_entry, &self.source_directory)
         } else {
             to_entry.to_path_buf()
         };
 
-        if try_ntfs(path, output_file, item).await.is_ok() {
+        if try_ntfs(path, output_file, snapshot).await.is_ok() {
             let metadata = std::fs::metadata(to_entry)
                 .expect("Failed to extract metadata");
             let mtime = FileTime::from_last_modification_time(&metadata);
             let atime = FileTime::from_last_access_time(&metadata);
-            let resolver = self.writer.get_filepath(mod_entry.clone());
+            let resolver = self.writer.get_filepath(modified_entry.clone());
 
             filetime::set_file_times(resolver, atime, mtime)
                 .expect("Failed to set time");
 
-            let filepath_art = self.writer.get_filepath_as_str(mod_entry.clone());
-            self.write_csv_row(mod_entry, filepath_art.to_string(), true).await;
+            let destination_path = self.writer.get_filepath_as_str(modified_entry.clone());
+            self.write_csv_row(modified_entry, destination_path.to_string(), true).await;
         }
         Ok(())
     }
 
     /// Adjust the path for NTFS snapshots
-    fn adjust_path_for_ntfs(to_entry: &PathBuf, src: &str) -> PathBuf {
+    fn adjust_path_for_ntfs(to_entry: &PathBuf, source: &str) -> PathBuf {
         let entry_str = to_entry.to_str().unwrap();
-        let add_backslash = format!("{}\\", src);
+        let add_backslash = format!("{}\\", source);
         PathBuf::from(entry_str.replace(&add_backslash, ""))
     }
 
     /// Modify entry path for VSS-specific cases
     fn modify_entry_path(&mut self, path: String) -> String {
-        if let Some(ref vss_item) = self.vss_item {
-            let vss_as_path = PathBuf::from(&vss_item.device_volume_name);
+        if let Some(ref vss_snapshot) = self.vss_snapshot {
+            let vss_as_path = PathBuf::from(&vss_snapshot.device_volume_name);
             if let Some(vss_name) = vss_as_path.file_name() {
-                return path.replace(&self.src, vss_name.to_str().unwrap());
+                return path.replace(&self.source_directory, vss_name.to_str().unwrap());
             }
         }
         path
@@ -149,13 +149,13 @@ impl Collect {
             .collect()
     }
 
-    pub async fn zip(&self, zip_password: Option<String>) -> Result<()> {
+    pub async fn zip(&mut self, zip_password: Option<String>) -> Result<()> {
         let zipping = self.writer.zip(zip_password);
         zipping.await
     }
 
     pub(crate) fn vss(&mut self, vss_item: VSSObj) {
-        self.vss_item = Some(vss_item);
+        self.vss_snapshot = Some(vss_item);
     }
 
     async fn write_csv_row(&mut self, source_artifact: String, destination_artifact: String, from_ntfs: bool) {
@@ -172,18 +172,18 @@ impl Collect {
         log_item.from_ntfs = from_ntfs;
 
 
-        let mut get_file = File::open(destination_artifact).await.unwrap();
+        let mut file = File::open(destination_artifact).await.unwrap();
         let mut hasher = Sha1::new();
-        let mut contents = [0u8; 4092];
+        let mut buffer = [0u8; 4092];
         loop {
-            let reader = get_file.read(&mut contents).await;
-            if reader.unwrap() == 0 {
+            let bytes_read = file.read(&mut buffer).await;
+            if bytes_read.unwrap() == 0 {
                 break;
             }
-            hasher.update(contents);
+            hasher.update(buffer);
         }
         log_item.hasfile_sha256 = hex::encode(hasher.finalize());
 
-        let _ = self.csv_copy.add_row_struct(log_item).await;
+        let _ = self.csv_logger.add_row_struct(log_item).await;
     }
 }

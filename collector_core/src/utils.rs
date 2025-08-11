@@ -1,6 +1,10 @@
-use std::mem;
+#[cfg(target_os = "windows")]
+use std::{
+    mem,
+    ptr::null_mut
+};
+
 use std::path::PathBuf;
-use std::ptr::null_mut;
 
 #[cfg(target_family = "windows")]
 use winapi::{
@@ -23,32 +27,31 @@ use winapi::{
 #[cfg(target_os = "linux")]
 use nix::unistd::Uid;
 
-
+#[derive(Clone, Debug)]
 pub struct FormatSource {
-    source: String,
+    source: PathBuf,
 }
 
 impl FormatSource {
     pub fn from<S: AsRef<str>>(source: S) -> Self {
         FormatSource {
-            source: source.as_ref().to_string(),
+            source: PathBuf::from(source.as_ref()),
         }
     }
 
     pub fn to_path(&mut self) -> PathBuf {
-        let get_self_string: String = self.to_string();
-        PathBuf::from(get_self_string)
-    }
-
-    pub fn to_string(&mut self) -> String {
-        if !self.source.ends_with("/") || !self.source.ends_with("\\") {
-            self.source.push('\\');
-        }
-        if self.source.starts_with("/") || self.source.starts_with("\\") {
-            self.source.remove(0);
-        }
         self.source.clone()
     }
+
+    pub fn to_string(&self) -> String {
+        self.source.to_str().unwrap().to_string().clone()
+    }
+
+    pub fn push(&mut self,value: &str) -> Self {
+        let _ = &self.source.push(value);
+        self.clone()
+    }
+
 }
 
 

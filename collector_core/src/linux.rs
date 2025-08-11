@@ -13,24 +13,24 @@ use tokio::io::AsyncReadExt;
 
 
 pub struct Collect {
-    pub src: String,
-    pub dst: String,
-    pub artifacts_glob: Vec<String>,
+    pub source_directory: FormatSource,
+    pub destination_directory: FormatSource,
+    pub artifact_patterns: Vec<String>,
     writer: Writer,
-    csv_copy: CsvLogFile,
+    csv_logger: CsvLogFile,
 }
 
 impl Collect {
-    pub async fn new(src: String, dst: String, artifacts_glob: Vec<String>) -> Collect {
-        let create_writer: Writer = Writer::new(dst.clone());
-        let csv_filename = create_writer.get_filepath_as_str("Collector_copy.csv".into());
-        let _create_csv = create_writer.create_file("Collector_copy.csv".into()).await;
+    pub async fn new(source: String, destination: String, patterns: Vec<String>) -> Collect {
+        let writer = Writer::new(destination.clone());
+        let csv_filename = writer.get_filepath_as_str("Collector_copy.csv".into());
+        let _ = writer.create_file("Collector_copy.csv".into()).await;
         Collect {
-            src,
-            dst,
-            artifacts_glob,
-            writer: create_writer,
-            csv_copy: CsvLogFile::new(csv_filename).await,
+            source_directory: FormatSource::from(source),
+            destination_directory: FormatSource::from(destination),
+            artifact_patterns: patterns,
+            writer,
+            csv_logger: CsvLogFile::new(csv_filename).await,
         }
     }
 
@@ -38,16 +38,14 @@ impl Collect {
         if !is_admin() {
             panic!("You need to run as Administrator!");
         }
-        for artifact in self.artifacts_glob.clone() {
-            let mut artifact_element = artifact.to_string();
-            if artifact_element.starts_with("\\") {
-                artifact_element.remove(0);
+        for pattern in self.artifact_patterns.clone() {
+            let mut normalized_pattern = pattern;
+            if normalized_pattern.starts_with("/") {
+                normalized_pattern.remove(0);
             }
-
-            let src_path: PathBuf = FormatSource::from(&self.src).to_path().join(artifact_element);
-            let source_with_artifact_out: &str = src_path.to_str().expect("Invalid path for artifact");
-
-            for entry in Self::fetch_entries(&source_with_artifact_out) {
+            
+            let source_path = self.source_directory.clone().push(normalized_pattern.as_str()).to_string();
+            for entry in Self::fetch_entries(source_path) {
                 if let Err(e) = self.process_entry(entry).await {
                     eprintln!("Error for entry : {:?}", e);
                 }
@@ -57,11 +55,14 @@ impl Collect {
 
 
     /// Process a single entry
-    async fn process_entry(&mut self, mut entry: PathBuf) -> Result<()> {
-        let mut output_file: File = self.writer.create_file(entry.clone().to_string_lossy().to_string()).await;
-
+    async fn process_entry(&mut self, entry: PathBuf) -> Result<()> {
+        let mut normalized_entry = entry.clone();
+        if normalized_entry.starts_with("/") {
+            normalized_entry = normalized_entry.strip_prefix("/")?.to_path_buf();
+        }
+        let mut output_file: File = self.writer.create_file(normalized_entry.clone().to_string_lossy().to_string()).await;
         // Filesystem approach
-        if self.process_filesystem(&mut entry.clone(), &mut output_file, entry.clone().to_string_lossy().to_string())
+        if self.process_filesystem(&mut normalized_entry.clone(), &mut output_file, normalized_entry.clone().to_string_lossy().to_string())
             .await
             .is_ok()
         {
@@ -73,30 +74,29 @@ impl Collect {
     /// Process file using filesystem
     async fn process_filesystem(
         &mut self,
-        to_entry: &mut PathBuf,
+        entry_path: &mut PathBuf,
         output_file: &mut File,
-        mod_entry: String,
+        entry_name: String,
     ) -> Result<(), ()> {
-        if try_filesystem(to_entry.clone(), output_file).await.is_ok() {
-            let filepath_art = self.writer.get_filepath_as_str(mod_entry.clone());
-            self.write_csv_row(mod_entry, filepath_art.to_string(), false).await;
+        if try_filesystem(entry_path.clone(), output_file).await.is_ok() {
+            let destination_path = self.writer.get_filepath_as_str(entry_name.clone());
+            self.write_csv_row(entry_name, destination_path.to_string(), false).await;
             return Ok(());
         }
         Err(())
     }
 
     /// Get all entries matching the glob
-    fn fetch_entries(pattern: &str) -> Vec<PathBuf> {
-        glob(pattern)
+    fn fetch_entries(pattern: String) -> Vec<PathBuf> {
+        glob(&pattern)
             .expect("Error to parse pattern")
             .filter_map(Result::ok)
             .filter(|p| p.is_file()) // Filter only files
             .collect()
     }
 
-    pub async fn zip(&self, zip_password: Option<String>) -> Result<()> {
-        let zipping = self.writer.zip(zip_password);
-        zipping.await
+    pub async fn zip(&mut self, zip_password: Option<String>) -> Result<()> {
+        self.writer.zip(zip_password).await
     }
 
     async fn write_csv_row(&mut self, source_artifact: String, destination_artifact: String, from_ntfs: bool) {
@@ -113,18 +113,18 @@ impl Collect {
         log_item.from_ntfs = from_ntfs;
 
 
-        let mut get_file = File::open(destination_artifact).await.unwrap();
+        let mut file = File::open(destination_artifact).await.unwrap();
         let mut hasher = Sha1::new();
-        let mut contents = [0u8; 4092];
+        let mut buffer = [0u8; 4092];
         loop {
-            let reader = get_file.read(&mut contents).await;
-            if reader.unwrap() == 0 {
+            let bytes_read = file.read(&mut buffer).await;
+            if bytes_read.unwrap() == 0 {
                 break;
             }
-            hasher.update(contents);
+            hasher.update(buffer);
         }
         log_item.hasfile_sha256 = hex::encode(hasher.finalize());
 
-        let _ = self.csv_copy.add_row_struct(log_item).await;
+        let _ = self.csv_logger.add_row_struct(log_item).await;
     }
 }

@@ -12,20 +12,20 @@ use list_parse::ArtifactListing;
 use log::*;
 use simplelog::*;
 use std::fs::File;
-use std::panic;
+// use std::panic;
 use std::time;
 use sysinfo::System;
 
-fn custom_panic_hook() {
-    panic::set_hook(Box::new(|info| {
-        // Check if the panic has a message
-        if let Some(s) = info.payload().downcast_ref::<&str>() {
-            eprintln!("{}", s);
-        } else {
-            eprintln!("An unexpected error occurred.");
-        }
-    }));
-}
+// fn custom_panic_hook() {
+//     panic::set_hook(Box::new(|info| {
+//         // Check if the panic has a message
+//         if let Some(s) = info.payload().downcast_ref::<&str>() {
+//             eprintln!("{}", s);
+//         } else {
+//             eprintln!("An unexpected error occurred.");
+//         }
+//     }));
+// }
 
 #[tokio::main]
 async fn main() {
@@ -44,7 +44,7 @@ async fn main() {
         let args_unwrap = args.command.unwrap();
         match args_unwrap {
             ResourcesCommand::Resources(listing) => {
-                let parser_obj: YamlParser = YamlParser::new(args.path_resources.clone());
+                let mut parser_obj: YamlParser = YamlParser::new(args.path_resources.clone());
                 let doc_artifacts: Vec<YamlArtifact> = parser_obj.get_doc_struct().await;
                 let load_art_list = ArtifactListing::load(doc_artifacts);
                 match listing.command {

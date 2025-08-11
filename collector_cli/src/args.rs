@@ -13,7 +13,7 @@ pub struct ArgsCollector{
     pub source: String,
 
     /// The destination path of collecting artifact.
-    #[arg(short,long, default_value=".\\out\\")]
+    #[arg(short,long, default_value="out\\")]
     pub destination: String,
 
     /// Resources selection.
@@ -23,7 +23,7 @@ pub struct ArgsCollector{
     pub resources: Vec<String>,
 
     /// Path to artifact resources.
-    #[arg(short,long,default_value=".\\Resources\\")]
+    #[arg(short,long,default_value="Resources\\")]
     pub path_resources: String,
 
     /// Zip the output directory.

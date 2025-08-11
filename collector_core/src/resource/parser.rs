@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use glob::glob;
 use tokio::fs;
 use serde::Deserialize;
@@ -11,7 +11,7 @@ type GlobString = String;
 // This structure parse yaml file from resources.
 #[derive(Clone)]
 pub struct YamlParser {
-    pub resource_path: String,
+    pub resource_path: FormatSource,
     artifact_element_glob: Vec<GlobString>,
 }
 
@@ -19,34 +19,35 @@ impl YamlParser {
     // Initialize  YamlParser structure with default element
     pub fn init() -> Self {
         YamlParser {
-            resource_path: String::new(),
+            resource_path: FormatSource::from("./Resources/"),
             artifact_element_glob: Vec::new(),
         }
     }
 
     // Create structure with parameter.
     pub fn new(resource_path: String) -> Self {
-        let mut format_resource_path = FormatSource::from(resource_path).to_string();
-        if !Path::new(&format_resource_path).exists() {
+        let mut format_resource_path = FormatSource::from(resource_path);
+        // println!("{:?}",format_resource_path);
+        if !format_resource_path.to_path().exists() {
             panic!("Resources path doesn't exists");
         }
-        format_resource_path.push_str("**/*.yaml");
+        format_resource_path.push("**/*.yaml");
         YamlParser {
             resource_path: format_resource_path,
             artifact_element_glob: Vec::new(),
         }
     }
 
-    pub fn get_yaml_file(&self) -> Vec<PathBuf> {
+    pub fn get_yaml_file(&mut self) -> Vec<PathBuf> {
         let mut list_yaml_file = Vec::new();
-        for entry in glob(&self.resource_path).expect("Failed to read glob pattern") {
+        for entry in glob(&self.resource_path.to_string()).expect("Failed to read glob pattern") {
             let path_to_string = entry.unwrap();
             list_yaml_file.push(path_to_string.to_path_buf());
         }
         list_yaml_file
     }
 
-    pub async fn get_doc_struct(&self) -> Vec<YamlArtifact> {
+    pub async fn get_doc_struct(&mut self) -> Vec<YamlArtifact> {
         let mut parse_file = Vec::new();
         for file in &self.get_yaml_file() {
             let reader = fs::read_to_string(file.clone()).await;
@@ -97,8 +98,8 @@ impl YamlParser {
     // Recursive function to extract all glob path from yaml and selecting artifact.
     pub fn select_artifact(&mut self, artifacts_name: Vec<GlobString>, doc_artifact: Vec<YamlArtifact>) -> Vec<GlobString> {
         let get_doc_artifact = doc_artifact;
-        for artifact_want in artifacts_name {
-            let get = &get_doc_artifact.iter().find(|e| e.metadata.name == artifact_want);
+        for artifact_selectioned in artifacts_name {
+            let get = &get_doc_artifact.iter().find(|e| e.metadata.name == artifact_selectioned);
             match get {
                 Some(struct_element) => {
                     match &struct_element.artifact.group {
@@ -108,13 +109,14 @@ impl YamlParser {
                     match &struct_element.artifact.path {
                         Some(name_artifact_elements) => name_artifact_elements.iter().for_each(|e| {
                             if !self.artifact_element_glob.contains(e) {
-                                self.artifact_element_glob.push(e.to_string())
+                                let check_format_artifact = format_artifact(e.to_string());
+                                self.artifact_element_glob.push(check_format_artifact);
                             }
                         }),
                         None => {}
                     };
                 },
-                None => panic!("Error of artifact argument : \"{}\" name not found in file resources", &artifact_want),
+                None => panic!("Error of artifact argument : \"{}\" name not found in file resources", &artifact_selectioned),
             }
         }
         self.artifact_element_glob.clone()
@@ -136,4 +138,11 @@ fn validate_artifact(artifact: &Artifact) -> Result<(), &'static str> {
         (Some(_), Some(_)) => Err("Both artifact.group and artifact.path are present, please select one"),
         _ => Ok(()),
     }
+}
+
+fn format_artifact(mut artifact: String) -> String {
+    if artifact.starts_with("/") || artifact.starts_with("\\") {
+        artifact.remove(0);
+    }
+    artifact
 }

@@ -1,12 +1,15 @@
+#[cfg(target_os = "windows")]
 mod lowfs;
+#[cfg(target_os = "windows")]
 mod sector_reader;
 
 #[cfg(target_os = "windows")]
 use crate::mount::vss_info::VSSObj;
+#[cfg(target_os = "windows")]
+use regex::Regex;
 
 use anyhow::Result;
 use log::*;
-use regex::Regex;
 use std::path::PathBuf;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -60,7 +63,7 @@ pub async fn try_ntfs(source: PathBuf, dest_file: &mut File, vss_item: Option<VS
     }
 }
 
-
+#[cfg(target_os = "windows")]
 fn get_drive_letter(path: PathBuf) -> Option<String> {
     let format_path: &str = path.to_str().unwrap();
     let drive_letter_regex = Regex::new(r"(^[A-Za-z]:\\)").expect("Failed to parse regex");
