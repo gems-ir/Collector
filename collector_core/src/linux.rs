@@ -60,6 +60,7 @@ impl Collect {
         if normalized_entry.starts_with("/") {
             normalized_entry = normalized_entry.strip_prefix("/")?.to_path_buf();
         }
+
         let mut output_file: File = self.writer.create_file(normalized_entry.clone().to_string_lossy().to_string()).await;
         // Filesystem approach
         if self.process_filesystem(&mut normalized_entry.clone(), &mut output_file, normalized_entry.clone().to_string_lossy().to_string())

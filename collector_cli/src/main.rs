@@ -1,5 +1,9 @@
 mod list_parse;
 mod args;
+#[cfg(target_os = "linux")]
+mod values_linux;
+#[cfg(target_os = "windows")]
+mod values_windows;
 
 use args::*;
 use chrono::Utc;
@@ -12,24 +16,25 @@ use list_parse::ArtifactListing;
 use log::*;
 use simplelog::*;
 use std::fs::File;
-// use std::panic;
+use std::panic;
 use std::time;
 use sysinfo::System;
 
-// fn custom_panic_hook() {
-//     panic::set_hook(Box::new(|info| {
-//         // Check if the panic has a message
-//         if let Some(s) = info.payload().downcast_ref::<&str>() {
-//             eprintln!("{}", s);
-//         } else {
-//             eprintln!("An unexpected error occurred.");
-//         }
-//     }));
-// }
+fn custom_panic_hook() {
+    panic::set_hook(Box::new(|info| {
+        // Check if the panic has a message
+        if let Some(s) = info.payload().downcast_ref::<&str>() {
+            eprintln!("Error : {}", s);
+        } else {
+            eprintln!("Error : An unexpected error occurred.");
+        }
+    }));
+}
 
 #[tokio::main]
 async fn main() {
-    // custom_panic_hook();
+    custom_panic_hook();
+
     // Argument parser
     let args = ArgsCollector::parse();
     let src_string = args.source;

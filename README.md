@@ -4,6 +4,24 @@ This tool can collect different artifact on running system.
 
 Like a Kape but faster, more secure and open source in rust 🦀.
 
+## 🧩 How to use it
+
+To use this tool, you need to go to [release page](https://github.com/gems-ir/Collector/releases) of this project and donwload the lastest release.
+
+After that, download the [resources](#resources) files to use it.
+
+You can follow the [help command](#help_cmd) to personalize execution or you can run the binary as administrator on your computer.
+
+Path exemple to use: 
+```
+./my_folder
+ |-- collector_cli(.exe)
+ |-- Resources
+        |-- AntiVirus
+        |-- Browser
+        |-- ...
+```
+
 ## 🏗️ Build Poject
 
 You need to install [rust](https://www.rust-lang.org/fr/tools/install) on you computer.
@@ -20,9 +38,12 @@ Or build in production mode:
 cargo build --release --bin collector_cli
 ```
 
-### Resources
+### 📚Resources {#resources}
 
-You can download the collection resources here: [https://github.com/gems-ir/Resources.git](https://github.com/gems-ir/Resources.git) 
+You can download the collection resources here: [https://github.com/gems-ir/Resources](https://github.com/gems-ir/Resources)
+```bash
+git clone https://github.com/gems-ir/Resources.git
+```
 
 ### Build packer
 
@@ -48,12 +69,8 @@ after whcih you can build the project for example:
 cargo build --target x86_64-pc-windows-gnu --bin collector_cli --release
 ```
 
-## Run collector
 
-The project is designed to be easy to run.
-You can simply launch the binary and the process will start.
-
-## 🆘 Help command
+## 🆘 Help command {#help_cmd}
 
 ```bash
 This tool was an artefact collector fast and secure. It can collect low level files.

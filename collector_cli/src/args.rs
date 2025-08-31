@@ -1,3 +1,7 @@
+#[cfg(target_os = "linux")]
+use crate::values_linux::*;
+#[cfg(target_os = "windows")]
+use crate::values_windows::*;
 use clap::{Parser, Subcommand, Args};
 
 /// This is a best and fast artifact collector.
@@ -9,21 +13,21 @@ pub struct ArgsCollector{
     pub command: Option<ResourcesCommand>,
 
     /// The source path of collecting artifact.
-    #[arg(short,long, default_value="C:\\")]
+    #[arg(short,long, default_value=SOURCE_PATH)]
     pub source: String,
 
     /// The destination path of collecting artifact.
-    #[arg(short,long, default_value="out\\")]
+    #[arg(short,long, default_value=DESTINATION_PATH)]
     pub destination: String,
 
     /// Resources selection.
     /// You can list with "resources" command.
     /// Exemple: MFT,Prefetch,EVTX
-    #[arg(short,long, default_value="All",value_delimiter = ',')]
+    #[arg(short,long, default_value=RESOURCES_EXEMPLE,value_delimiter = ',')]
     pub resources: Vec<String>,
 
     /// Path to artifact resources.
-    #[arg(short,long,default_value="Resources\\")]
+    #[arg(short,long,default_value="Resources/")]
     pub path_resources: String,
 
     /// Zip the output directory.
