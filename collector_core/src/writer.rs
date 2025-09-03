@@ -16,9 +16,9 @@ pub struct Writer {
 
 impl Writer {
     pub fn new<P: AsRef<Path> + AsRef<str>>(destination_path: P) -> Self {
-        let mut base_destination_formatting = FormatSource::from(destination_path);
+        let base_destination_formatting = FormatSource::from(destination_path);
         let hostname = System::host_name().unwrap();
-        let formatted_path = base_destination_formatting.push(&format!("Collector_{}", hostname));
+        let formatted_path = base_destination_formatting.clone().push(&format!("Collector_{}", hostname));
         Writer {
             base_destination: base_destination_formatting,
             full_destination: FormatSource::from(formatted_path.to_string()),
@@ -91,7 +91,7 @@ impl Writer {
             let entry = entry?;
             let path = entry.path();
             let relative_path = path.strip_prefix(self.full_destination.clone().to_path())?;
-
+        
             if path.is_file() {
                 zip.start_file_from_path(relative_path, options.clone())?;
                 let mut f = fs::File::open(path).await?;

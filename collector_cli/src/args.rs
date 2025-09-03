@@ -27,7 +27,7 @@ pub struct ArgsCollector{
     pub resources: Vec<String>,
 
     /// Path to artifact resources.
-    #[arg(short,long,default_value="Resources/")]
+    #[arg(short,long,default_value=PATH_RESOURCE)]
     pub path_resources: String,
 
     /// Zip the output directory.
