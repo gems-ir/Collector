@@ -110,7 +110,7 @@ Options:
 
 - [X] Low-level file collection
 - [X] VSS (Collect from volume shadow copy)
-- [X] Add ZIP password
-- [X] Emebed config file and resources to execute in click and lauch binary.
+- [X] Add ZIP + password
+- [X] Embeded config file and resources into binary to execute in click and launch mode.
 - [ ] Adaptive collect
 - [ ] GUI
