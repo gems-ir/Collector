@@ -1,0 +1,12 @@
+[package]
+name = "collector_gui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+repository.workspace = true
+keywords.workspace = true
+
+[dependencies]
+iced = { version = "0.13.1", features = ["debug", "tokio", "image", "svg"] }
+rfd = "0.15.4"
