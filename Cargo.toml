@@ -1,5 +1,5 @@
 [workspace]
-members = ["collector_cli", "collector_core", "collector_packer"]
+members = ["collector_cli", "collector_core"]
 resolver = "2"
 
 [workspace.package]
@@ -20,3 +20,6 @@ opt-level = 3
 debug = false
 codegen-units = 16
 panic = "abort"
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1.12"
