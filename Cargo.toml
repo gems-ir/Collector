@@ -20,6 +20,3 @@ opt-level = 3
 debug = false
 codegen-units = 16
 panic = "abort"
-
-[target.'cfg(windows)'.build-dependencies]
-winres = "0.1.12"
