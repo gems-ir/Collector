@@ -1,0 +1,5 @@
+source_path = "/"
+destination_path = "./out/"
+resources_list = [
+    "TestL"
+]
