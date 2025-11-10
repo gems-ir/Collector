@@ -1,9 +1,0 @@
-{
-	"source_folder":"C:\\",
-	"destination_folder":"./out/",
-	"resources_list_artefact":["Prefetch"],
-	"vss":false,
-	"zip":false,
-	"zip_pass":"",
-	"verbose":false
-}

@@ -2,13 +2,12 @@
 use crate::values_linux::*;
 #[cfg(target_os = "windows")]
 use crate::values_windows::*;
-use clap::{Parser, Subcommand, Args};
+use clap::{Args, Parser, Subcommand};
 
-/// This is a best and fast artifact collector.
+/// This is the best and fast artifact collector.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
-pub struct ArgsCollector{
-
+pub struct ArgsCollector {
     #[command(subcommand)]
     pub command: Option<ResourcesCommand>,
 
@@ -22,8 +21,8 @@ pub struct ArgsCollector{
 
     /// Resources selection.
     /// You can list with "resources" command.
-    /// Exemple: MFT,Prefetch,EVTX
-    #[arg(short,long, default_value=RESOURCES_EXEMPLE,value_delimiter = ',')]
+    /// Example: MFT,Prefetch,EVTX
+    #[arg(short,long, default_value=RESOURCES_EXAMPLE,value_delimiter = ',')]
     pub resources: Vec<String>,
 
     /// Path to artifact resources.
@@ -38,36 +37,40 @@ pub struct ArgsCollector{
     #[arg(long)]
     pub pass: Option<String>,
 
-    /// Collect from vss. (longer)
+    /// Collect from vss. (Take more time)
     #[cfg(target_os = "windows")]
     #[arg(long)]
     pub vss: bool,
+
+    /// Use config file
+    #[arg(long, short)]
+    pub config: Option<String>,
 
     /// Print log output in terminal. (longer)
     #[arg(long)]
     pub log: bool,
 
     /// Verbose log
-    #[arg(short,long)]
+    #[arg(short, long)]
     pub verbose: bool,
 
 }
 
-#[derive(Subcommand,Debug)]
-pub enum ResourcesCommand{
+#[derive(Subcommand, Debug)]
+pub enum ResourcesCommand {
     /// Resource list options
     Resources(ResourcesArgs),
 }
 
 #[derive(Debug, Args)]
-pub struct ResourcesArgs{
+pub struct ResourcesArgs {
     #[command(subcommand)]
     pub command: ListResources,
 }
 
 
 #[derive(Debug, Subcommand)]
-pub enum ListResources{
+pub enum ListResources {
     /// List all target names
     Targets,
     /// List all group name

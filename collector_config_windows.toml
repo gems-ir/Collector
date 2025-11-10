@@ -1,0 +1,5 @@
+source_path = "C:\\"
+destination_path = "./out/"
+resource_list = [
+    "Prefetch"
+]
