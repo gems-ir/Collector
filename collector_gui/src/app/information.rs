@@ -1,5 +1,7 @@
-use iced::widget::{button, column, container, row, rule, text};
-use iced::{Border, Center, Element, Fill, Padding, Task};
+use crate::app::utils::{containerized, titled};
+use crate::config::Config;
+use iced::widget::{button, checkbox, column, container, row, text};
+use iced::{Center, Element, Fill, Length, Task};
 use std::path::PathBuf;
 
 #[derive(Default, Debug)]
@@ -7,12 +9,14 @@ pub(crate) struct Infos {
     source_file: Option<PathBuf>,
     destination_file: Option<PathBuf>,
     is_loading: bool,
+    vss_checked: bool,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) enum InfosMsg {
     OpenFolder(FolderType),
     FolderOpened(FolderType, Result<PathBuf, Error>),
+    VssToggle(bool),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -50,62 +54,46 @@ impl Infos {
                         }
                     }
                 }
-
+                Task::none()
+            }
+            InfosMsg::VssToggle(is_checked) => {
+                self.vss_checked = is_checked;
                 Task::none()
             }
         }
     }
 
-    pub(crate) fn view(&self) -> Element<'_, InfosMsg> {
+    pub(crate) fn view(&self, config: &Config) -> Element<'_, InfosMsg> {
+        
+        
         let lines = column![
+            titled("Information"),
+            self.folder_row("Select your target source folder:".to_string(), &self.source_file, FolderType::Source, config),
+            // Show vss checkbox only if for Windows OS execution.
             container(
-                column![
-                    text("Select your information:"),
-                    rule::Rule::horizontal(1)
-                        .style(|_theme| rule::Style {
-                            color: iced::Color::WHITE,
-                            width: 2,
-                            radius: 0.0.into(),
-                            fill_mode: rule::FillMode::Percent(30.0),
-                        })
-                ]
-                    .align_x(Center)
-                    .spacing(2)
+                checkbox("Allow VSS extracting", self.vss_checked).on_toggle(InfosMsg::VssToggle)
             )
-            .padding(Padding::new(10.0).bottom(20)),
-            self.folder_row("Select your target source folder:".to_string(), &self.source_file, FolderType::Source),
-            self.folder_row("Select your destination folder:".to_string(), &self.destination_file, FolderType::Destination),
+            .height(if cfg!(target_os = "windows") { Length::Shrink } else { Length::Fixed(0.0) }),
+            self.folder_row("Select your destination folder:".to_string(), &self.destination_file, FolderType::Destination, config),
         ]
             .width(Fill)
             .align_x(Center)
             .spacing(10);
 
-        container(lines)
-            .padding(15)
-            .width(Fill)
-            .align_x(Center)
-            .align_y(Center)
-            .style(|_theme| {
-                container::Style {
-                    border: Border {
-                        color: iced::Color::from_rgb(0.5, 0.5, 0.5),
-                        width: 2.0,
-                        radius: 5.0.into(),
-                    },
-                    ..Default::default()
-                }
-            })
-            .into()
+        containerized(lines)
     }
 
-    fn folder_row(&self, label: String, path: &Option<PathBuf>, folder_type: FolderType) -> Element<'_, InfosMsg> {
+    fn folder_row(&self, label: String, path: &Option<PathBuf>, folder_type: FolderType, config: &Config) -> Element<'_, InfosMsg> {
         let path_text = if let Some(path) = path {
             format!("{}", path.display())
         } else {
-            "No folder selected".to_string()
+            match folder_type {
+                FolderType::Source => config.clone().source_path.unwrap_or("No folder selected".to_string()),
+                FolderType::Destination => config.clone().destination_path.unwrap_or("No folder selected".to_string())
+            }
         };
 
-        let row = row![
+        row![
             text(label),
             button("...")
                 .padding(3)
@@ -117,9 +105,8 @@ impl Infos {
             text(path_text)
         ]
             .spacing(10)
-            .align_y(Center);
-        row.into()
-        // .into()
+            .align_y(Center)
+            .into()
     }
 }
 

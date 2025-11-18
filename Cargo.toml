@@ -1,5 +1,5 @@
 [workspace]
-members = ["collector_cli", "collector_core"]
+members = ["collector_cli", "collector_core", "collector_gui"]
 resolver = "2"
 
 [workspace.package]

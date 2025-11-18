@@ -10,3 +10,8 @@ keywords.workspace = true
 [dependencies]
 iced = { version = "0.13.1", features = ["debug", "tokio", "image", "svg"] }
 rfd = "0.15.4"
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "0.9.8"
+
+[build-dependencies]
+winres = "0.1.12"
