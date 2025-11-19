@@ -2,7 +2,7 @@ use crate::app::utils::containerized;
 use iced::widget::{button, row};
 use iced::Element;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub(crate) struct Start {}
 
 #[derive(Debug, Clone)]

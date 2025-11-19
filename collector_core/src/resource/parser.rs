@@ -1,7 +1,7 @@
-use std::path::PathBuf;
 use glob::glob;
-use tokio::fs;
 use serde::Deserialize;
+use std::path::PathBuf;
+use tokio::fs;
 
 use crate::resource::file_struct::*;
 use crate::utils::FormatSource;
@@ -106,16 +106,15 @@ impl YamlParser {
                         Some(name_artifact_file) => self.select_artifact(name_artifact_file.to_vec(), get_doc_artifact.clone()),
                         None => Vec::new()
                     };
-                    match &struct_element.artifact.path {
-                        Some(name_artifact_elements) => name_artifact_elements.iter().for_each(|e| {
+                    if let Some(name_artifact_elements) = &struct_element.artifact.path {
+                        name_artifact_elements.iter().for_each(|e| {
                             if !self.artifact_element_glob.contains(e) {
                                 let check_format_artifact = format_artifact(e.to_string());
                                 self.artifact_element_glob.push(check_format_artifact);
                             }
-                        }),
-                        None => {}
+                        })
                     };
-                },
+                }
                 None => panic!("Error of artifact argument : \"{}\" name not found in file resources", &artifact_selectioned),
             }
         }

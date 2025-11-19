@@ -6,7 +6,8 @@ mod config;
 mod app;
 
 use iced::widget::{column, container, row, text, Column, Container};
-use iced::{color, Background, Border, Center, Fill, Renderer, Task, Theme};
+use iced::window::Position;
+use iced::{color, Background, Border, Center, Fill, Renderer, Size, Subscription, Task, Theme};
 // use iced::Theme;
 
 use crate::app::information::{Infos, InfosMsg};
@@ -16,19 +17,19 @@ use crate::app::start::{Start, StartMsg};
 use crate::config::Config;
 
 pub fn main() -> iced::Result {
-    iced::application("Collector GUI", CollectorGui::update, CollectorGui::view)
-        .window(iced::window::Settings {
-            icon: Some(iced::window::icon::from_file("assets/logo.ico").unwrap()),
-            size: iced::Size::new(1300.0, 600.0),
-            min_size: Some(iced::Size::new(1000.0, 450.0)),
-            position: iced::window::Position::Specific(iced::Point::new(50.0, 50.0)),
-            ..Default::default()
-        })
+    iced::application(CollectorGui::title, CollectorGui::update, CollectorGui::view)
+        // .window(iced::window::Settings {
+        //     icon: Some(iced::window::icon::from_file("assets/logo.ico").unwrap()),
+        //     min_size: Some(Size::new(1000.0, 450.0)),
+        //     ..Default::default()
+        // })
+        // .position(Position::Specific(iced::Point::new(50.0, 50.0)))
+        // .window_size(Size::new(1300.0, 600.0))
         // .theme(CollectorGui::theme)
         .run()
 }
 
-#[derive(Default)]
+#[derive(Debug)]
 struct CollectorGui {
     start: Start,
     information: Infos,
@@ -47,8 +48,16 @@ enum CollectorGuiMsg {
 
 
 impl CollectorGui {
+    fn new() -> (Self, Task<CollectorGuiMsg>) {
+        (Self{
+            ..Default::default()
+        },
+        Task::none()
+        )
+    }
     fn update(&mut self, action: CollectorGuiMsg) -> Task<CollectorGuiMsg> {
-        // println!("receiving action: {:?} ", action);
+        println!("{:?}", self);
+        // self.resources = ListResources::new();
         match action {
             CollectorGuiMsg::StartBox(_start_msg) => {
                 Task::none()
@@ -100,8 +109,6 @@ impl CollectorGui {
             .style(|_theme| {
                 container::Style {
                     border: Border {
-                        // color: Color::from_rgb(0.5, 0.5, 0.5),
-                        // width: 2.0,
                         radius: 5.0.into(),
                         ..Default::default()
                     },
@@ -121,4 +128,23 @@ impl CollectorGui {
     // fn theme(&self) -> Theme {
     //     Theme::SolarizedDark
     // }
+    pub fn title(&self) -> String {
+        "Collector GUI".to_string()
+    }
+    fn subscription(&self) -> Subscription<CollectorGuiMsg> {
+        println!("hello subscription");
+        Subscription::none()
+    }
+}
+
+impl Default for CollectorGui {
+    fn default() -> Self {
+        Self {
+            start: Start::default(),
+            resources: ListResources::new(),
+            information: Infos::default(),
+            output: Output::default(),
+            is_loading: false,
+        }
+    }
 }

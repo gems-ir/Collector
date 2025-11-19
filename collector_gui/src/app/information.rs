@@ -69,11 +69,11 @@ impl Infos {
         let lines = column![
             titled("Information"),
             self.folder_row("Select your target source folder:".to_string(), &self.source_file, FolderType::Source, config),
-            // Show vss checkbox only if for Windows OS execution.
+            // Show vss checkbox only for Windows OS.
             container(
                 checkbox("Allow VSS extracting", self.vss_checked).on_toggle(InfosMsg::VssToggle)
             )
-            .height(if cfg!(target_os = "windows") { Length::Shrink } else { Length::Fixed(0.0) }),
+                .height(if cfg!(target_os = "windows") { Length::Shrink } else { Length::Fixed(0.0) }),
             self.folder_row("Select your destination folder:".to_string(), &self.destination_file, FolderType::Destination, config),
         ]
             .width(Fill)
