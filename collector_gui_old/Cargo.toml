@@ -10,5 +10,12 @@ keywords.workspace = true
 [dependencies]
 collector_core = { path = "../collector_core" }
 
+iced = { version = "0.13.1", features = ["debug", "tokio", "image", "svg"] }
+rfd = "0.15.4"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_yml = "0.0.12"
+toml = "0.9.8"
+uuid = { version = "1.18.1", features = ["v4"] }
+
 [build-dependencies]
 winres = "0.1.12"

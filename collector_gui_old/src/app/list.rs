@@ -1,9 +1,9 @@
 use crate::app::utils::{containerized, titled};
 use crate::config::Config;
+use collector_core::resource::YamlArtifact;
 use iced::widget::{column, keyed_column, row, text, text_input};
 use iced::{Center, Element};
 use uuid::Uuid;
-use collector_core::resource::{YamlArtifact, YamlParser};
 
 #[derive(Default, Debug)]
 pub(crate) struct ListResources {
@@ -22,7 +22,7 @@ impl ListResources {
             resource_list: Vec::new(),
         }
     }
-    
+
     pub(crate) fn view(&self, _config: &Config) -> Element<'_, ListResourcesMsg> {
         let listing: Element<_> = keyed_column(
             self.resource_list
@@ -57,7 +57,7 @@ impl Resource {
     pub(crate) fn new(yaml_art: YamlArtifact) -> Self {
         let raw_artifact: String = serde_yml::to_string(&yaml_art).unwrap();
         let category = yaml_art.metadata.category.clone().unwrap_or("Other".to_string());
-        Self{
+        Self {
             id: Uuid::new_v4(),
             name: yaml_art.metadata.name,
             category,
