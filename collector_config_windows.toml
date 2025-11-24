@@ -3,3 +3,4 @@ destination_path = "./out/"
 resource_list = [
     "Prefetch"
 ]
+resource_path = "../Resources"

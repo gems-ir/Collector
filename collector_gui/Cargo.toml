@@ -9,6 +9,13 @@ keywords.workspace = true
 
 [dependencies]
 collector_core = { path = "../collector_core" }
+dark-light = "2.0.0"
+dioxus = { version = "0.7.1", features = ["desktop"] }
+dioxus-free-icons = { version = "0.10.0", features = ["lucide"] }
+image = "0.25.9"
+rfd = "0.15.4"
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "0.9.8"
 
 [build-dependencies]
 winres = "0.1.12"
