@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use crate::config::Config;
+use crate::config::{Config, AppData};
 use collector_core::resource::YamlParser;
 use dioxus::prelude::*;
 use dioxus_free_icons::icons::ld_icons;
@@ -22,9 +22,7 @@ pub(crate) struct EmptyTable{
 
 
 #[component]
-pub fn ListResources() -> Element {
-	let config = Config::parse_config_file();
-
+pub fn ListResources(config: Config) -> Element {
 	let resources_list = use_resource(move || {
 		let value = config.clone();
 		async move {
@@ -38,6 +36,7 @@ pub fn ListResources() -> Element {
 
 	let mut checked_resources = use_signal(|| Vec::<String>::new()); // output resources 
 	let mut is_initialized = use_signal(|| false);
+	let mut app_data = use_context::<Signal<AppData>>();
 
 	use_effect(move || {
 		if !is_initialized() {
@@ -54,94 +53,97 @@ pub fn ListResources() -> Element {
 				}
 			}
 		}
+		app_data.write().resource_list = checked_resources();
 	});
 
 	rsx! {
-		SearchResources{
-			search_query: search_query,
-			selected_category: selected_category,
-			resources: resources_list.read_unchecked().clone()
-		}
-		match &*resources_list.read_unchecked() {
-			Some(resources) => {
-				let et = if resources.is_empty(){
-					EmptyTable{
-						class: "bg-red-500 h-10 flex justify-center items-center p-4".to_string(),
-						text: "Resources path not found !".to_string(),
-					}
-				}else{
-					EmptyTable{
-						class: "h-10 flex justify-center items-center p-4".to_string(),
-						text: "No resource found !".to_string(),
-					}
-				};
+		div{
+			class: "h-full flex flex-col",
+			SearchResources{
+				search_query: search_query,
+				selected_category: selected_category,
+				resources: resources_list.read_unchecked().clone()
+			}
+			match &*resources_list.read_unchecked() {
+				Some(resources) => {
+					let et = if resources.is_empty(){
+						EmptyTable{
+							class: "bg-red-500 h-10 flex justify-center items-center p-4".to_string(),
+							text: "Resources path not found !".to_string(),
+						}
+					}else{
+						EmptyTable{
+							class: "h-10 flex justify-center items-center p-4".to_string(),
+							text: "No resource found !".to_string(),
+						}
+					};
 
-				let filtered_resources: Vec<Resource> = resources
-						.iter()
-						.filter(|resource| {
-							let query = search_query().to_lowercase();
-							let category = selected_category();
-							
-							let name_matches = if query.is_empty() {
-								true
-							} else {
-								resource.name.to_lowercase().contains(&query)
-							};
-							
-							let category_matches = if category == "All" {
-								true
-							} else {
-								resource.category == category
-							};
-							
-							name_matches && category_matches
-						})
-						.cloned()
-						.collect();
-				rsx! {
-					TableResources {
-						resource_list: filtered_resources,
-						checked_resources,
-						on_view: move |resource: Resource| {
-							selected_resource.set(Some(resource));
-						},
-						et
+					let filtered_resources: Vec<Resource> = resources
+							.iter()
+							.filter(|resource| {
+								let query = search_query().to_lowercase();
+								let category = selected_category();
+								
+								let name_matches = if query.is_empty() {
+									true
+								} else {
+									resource.name.to_lowercase().contains(&query)
+								};
+								
+								let category_matches = if category == "All" {
+									true
+								} else {
+									resource.category == category
+								};
+								
+								name_matches && category_matches
+							})
+							.cloned()
+							.collect();
+					rsx! {
+						TableResources {
+							resource_list: filtered_resources,
+							checked_resources,
+							on_view: move |resource: Resource| {
+								selected_resource.set(Some(resource));
+							},
+							et
+						}
+					}
+				},
+				None => rsx! {
+					div { class: "p-4 text-center",
+						"Resources loading..."
 					}
 				}
-			},
-			None => rsx! {
-				div { class: "p-4 text-center",
-					"Resources loading..."
+			}
+			if let Some(resource) = selected_resource() {
+				ResourceModal {
+					resource: resource.clone(),
+					on_close: move |_| selected_resource.set(None)
 				}
 			}
-		}
-		if let Some(resource) = selected_resource() {
-			ResourceModal {
-				resource: resource.clone(),
-				on_close: move |_| selected_resource.set(None)
-			}
-		}
-		
-		div { class: "px-4 flex gap-2",
-			h3 { 
-				class: "font-bold mb-2 text-stone-900", 
-				"Resources selected:" 
-			}
-			if checked_resources().is_empty() {
-				p { "Empty selected resources." }
-			} else {
-				div {
-					class: "flex gap-2",
-					for name in checked_resources() {
-						div{
-							class: "flex",
-							p { "{name}, " }
+			
+			div { class: "px-4 flex gap-2",
+				h3 { 
+					class: "font-bold mb-2 text-stone-900", 
+					"Resources selected:" 
+				}
+				if checked_resources().is_empty() {
+					p { "Empty selected resources." }
+				} else {
+					div {
+						class: "flex gap-2",
+						for name in checked_resources() {
+							div{
+								class: "flex",
+								p { "{name}, " }
+							}
 						}
 					}
 				}
 			}
 		}
-		 
 	}
 }
 
@@ -223,15 +225,15 @@ pub fn TableResources(
 						                    }
 						                }
 						                td{
-						                    class:"dark:text-gray-100 text-center w-sm max-w-3xs truncate",
+						                    class:"text-center w-sm max-w-3xs truncate",
 						                    "{resource.name}"
 						                }
 						                td{
-						                    class:"dark:text-gray-100 text-center w-md max-w-3xs truncate",
+						                    class:"text-center w-md max-w-3xs truncate",
 						                    "{resource.category}"
 						                }
 						                td{
-						                    class:"dark:text-gray-100 text-center w-md max-w-3xs truncate",
+						                    class:"text-center w-md max-w-3xs truncate",
 						                    "{resource.description}"
 						                }
 						                td{
@@ -239,7 +241,7 @@ pub fn TableResources(
 						                    div{
 						                        class:"w-full flex justify-center",
 						                        button{
-						                            class:"hover:text-green-500 dark:hover:text-green-700 cursor-pointer",
+						                            class:"hover:text-green-500 dark:hover:text-green-800 cursor-pointer",
 						                            onclick: move |_| {
 						                                on_view.call(resource.clone());
 						                            },
@@ -294,7 +296,7 @@ pub fn SearchResources(
 					"Search :" 
 				}
 				input{
-					class:"border rounded-xl pl-2 w-3xs dark:border-gray-600 bg-white dark:bg-slate-600 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-800",
+					class:"border rounded-xl pl-2 w-3xs dark:border-gray-600 bg-white dark:bg-slate-600 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:focus:ring-green-800  dark:focus:border-green-800",
 					placeholder:"Search by name ...",
 					name:"search_resource",
 					oninput: move |evt| search_query.set(evt.value())
@@ -308,7 +310,7 @@ pub fn SearchResources(
 					"Category : " 
 				}
 				select {
-					class: "border rounded-xl px-1 dark:border-gray-600 bg-white dark:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-800 cursor-pointer",
+					class: "border rounded-xl px-1 dark:border-gray-600 bg-white dark:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:focus:ring-green-800  dark:focus:border-green-800 cursor-pointer",
 					value: "{selected_category}",
 					onchange: move |evt| selected_category.set(evt.value()),
 					option { value: "All", "All Categories" }

@@ -6,7 +6,7 @@ use serde::Deserialize;
 use std::fs;
 
 
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(PartialEq, Deserialize, Clone, Debug, Default)]
 pub(crate) struct Config {
     pub(crate) source_path: Option<String>,
     pub(crate) destination_path: Option<String>,
@@ -26,7 +26,7 @@ impl Config {
         } else if cfg!(target_os = "linux") {
             "collector_config_linux.toml"
         } else {
-            panic!("Your OS system is not available yet.")
+            ""
         };
 
         let read_buf = fs::read(filename).unwrap_or_default();
@@ -78,4 +78,17 @@ impl Config {
             self.verbose = Some(false);
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub(crate) struct AppData {
+    pub(crate) source_path: String,
+    pub(crate) destination_path: String,
+    pub(crate) resource_path: String,
+    pub(crate) resource_list: Vec<String>,
+    pub(crate) verbose: Option<bool>,
+    pub(crate) zip: bool,
+    pub(crate) zip_pass: Option<String>,
+    pub(crate) vss: bool,
+    pub(crate) log: Option<bool>,
 }

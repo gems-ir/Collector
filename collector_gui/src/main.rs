@@ -8,9 +8,11 @@ use dioxus::desktop::{Config, WindowBuilder};
 use dioxus::prelude::*;
 use dark_light::Mode;
 
-use app::{Start, Information, Output, ListResources};
+use crate::app::{Start, Information, Output, ListResources};
+use crate::config::{Config as ConfigCollector, AppData};
 
 const ICON_BYTES: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/logo.png"));
+
 
 fn main() {
     let icon = image::load_from_memory(ICON_BYTES)
@@ -22,8 +24,10 @@ fn main() {
     LaunchBuilder::desktop().with_cfg(
         Config::new().with_window(
             WindowBuilder::new()
-                // .with_always_on_bottom(false)
-                .with_title("Collector Gui")
+                .with_focused(true)
+                .with_inner_size(dioxus::desktop::LogicalSize::new(1000, 650))
+                .with_min_inner_size(dioxus::desktop::LogicalSize::new(720, 200))
+                .with_title("Collector GUI")
                 .with_window_icon(Some(icon))
         )
     )
@@ -32,6 +36,8 @@ fn main() {
 
 #[component]
 fn App() -> Element {
+    use_context_provider(|| Signal::new(AppData::default()));
+
     let is_dark = use_signal(|| {
         match dark_light::detect() {
             Ok(Mode::Dark) => true,
@@ -52,9 +58,10 @@ fn App() -> Element {
 
 #[component]
 pub fn MainFrame(is_dark: Signal<bool>) -> Element {
+    let config = ConfigCollector::parse_config_file();
     rsx!{
         div{
-            class:"dark:bg-slate-800 p-3 h-dvh text-black dark:text-slate-300 text-sm",
+            class:"dark:bg-slate-800 p-3 h-dvh text-black dark:text-slate-300 text-sm overflow min-h-fit min-w-fit flex-col",
             div{
                 // top div
                 class:"grid grid-cols-2 border-b-1 p-1 divide-x",
@@ -68,7 +75,7 @@ pub fn MainFrame(is_dark: Signal<bool>) -> Element {
                            "Input information"
                         }
                     }
-                    Information{}
+                    Information{config: config.clone()}
                 }
                 div{
                     // Output, right
@@ -80,25 +87,25 @@ pub fn MainFrame(is_dark: Signal<bool>) -> Element {
                            "Output information"
                         }
                     }
-                    Output{}
+                    Output{config: config.clone()}
                 }
             }
+             
             div{
-                // resources, middle
-                class:"h-7/10",
+                class:"h-7/10 min-h-50 w-full border-b-1",
                 div{
-                    class:"h-full grid",
-                    ListResources{}
+                    class:"h-full",
+                    ListResources{config: config.clone()}
                 }
             }
             div{
                 // footer, bottom, start
-                class:"",
+                class:"pt-3",
                 div{
-                    class:"flex justify-center w-full  ",
                     Start{is_dark}
                 }
             }
+           
         }
     }
 }

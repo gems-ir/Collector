@@ -2,9 +2,15 @@ use dioxus::prelude::*;
 use dioxus_free_icons::icons::ld_icons;
 use dioxus_free_icons::Icon;
 
+use crate::config::AppData;
 
 #[component]
 pub fn Start(is_dark: Signal<bool>) -> Element {
+    let app_data = use_context::<Signal<AppData>>();
+    let execute_collector = move || {
+        println!("{:?}",app_data());
+    };
+
     rsx!{
         div{
             class:"w-full flex gap-3 justify-between",
@@ -36,8 +42,10 @@ pub fn Start(is_dark: Signal<bool>) -> Element {
                 div{
                 	class:"",
 	                button {
-	                    // class:"bg-slate-200 dark:bg-slate-600 dark:border-slate-400 dark:text-white hover:text-green-700 hover:cursor-pointer border-2 rounded-md hover:border-green-700 px-8 py-2 transition",
-	                    class:"bg-slate-200 dark:bg-slate-500 dark:border-slate-400 dark:text-white hover:text-green-500 hover:cursor-pointer border-2 rounded-md hover:border-green-700 px-8 py-2 transition",
+	                    class:"bg-slate-200 dark:bg-slate-500 dark:border-slate-400 dark:text-white hover:text-green-500 dark:hover:text-green-500 hover:cursor-pointer border-2 rounded-md hover:border-green-500 dark:hover:border-green-600 px-8 py-2 transition",
+                        onclick: move |_| {
+                            execute_collector()
+                        }, 
 	                    "Start"
 	                }
                 }
