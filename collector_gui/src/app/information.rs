@@ -59,6 +59,7 @@ pub fn Information(config: Config) -> Element {
                 div {
                     class: "flex gap-1",
                     input {
+                        onclick: move |_| {vss_toggle.set(!vss_toggle())},
                         checked: vss_toggle,
                         type: "checkbox"
                     }

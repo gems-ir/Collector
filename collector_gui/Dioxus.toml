@@ -1,0 +1,18 @@
+[application]
+name = "Collector GUI"
+out_dir = "dist"
+asset_dir = "assets"
+
+[bundle]
+identifier = "fr.tranos"
+publisher = "Tranos"
+icon = [
+   "assets/logo.ico"
+]
+
+[bundle.windows]
+icon_path = "assets/logo.ico"
+
+[webview_install_mode.EmbedBootstrapper]
+silent = true
+icon = "assets/logo.png"

@@ -102,7 +102,10 @@ pub fn MainFrame(is_dark: Signal<bool>) -> Element {
                 // footer, bottom, start
                 class:"pt-3",
                 div{
-                    Start{is_dark}
+                    Start{
+                        config: config.clone(),
+                        is_dark
+                    }
                 }
             }
            

@@ -54,7 +54,7 @@ pub fn Zip(config: Config) -> Element {
                         label {
                             class: "",
                             r#for: "zip",
-                            "Zip the destination folder"
+                            "Zip the destination folder:"
                         }
                         input {
                             r#type: "checkbox",
@@ -72,7 +72,7 @@ pub fn Zip(config: Config) -> Element {
                     if *zip.read() {
                             label {
                                 r#for: "zip_pass",
-                                "Add zip password"
+                                "Add a zip password:"
                             }
                             input {
                                 r#type: "checkbox",
