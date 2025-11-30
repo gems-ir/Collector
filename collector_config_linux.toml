@@ -3,3 +3,6 @@ destination_path = "./out/"
 resources_list = [
     "TestL"
 ]
+resource_path = "../Resources"
+# zip=false
+# zip_pass=""

@@ -1,7 +1,0 @@
-@import "tailwindcss";
-@source "./src/**/*.{rs,html,css}";
-@custom-variant dark (&:where(.dark, .dark *));
-/*@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');*/
-@import "flowbite/src/themes/minimal";
-/*@plugin "flowbite/plugin";*/
-/*@source "../../node_modules/flowbite";*/

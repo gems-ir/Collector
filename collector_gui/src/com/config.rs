@@ -1,7 +1,4 @@
-#[cfg(target_os = "linux")]
-use crate::values_linux::*;
-#[cfg(target_os = "windows")]
-use crate::values_windows::*;
+use crate::utils::*;
 use serde::Deserialize;
 use std::fs;
 
