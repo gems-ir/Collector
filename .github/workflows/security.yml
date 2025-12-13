@@ -1,0 +1,30 @@
+name: Security Audit
+
+on:
+  # schedule:
+    # - cron: '0 9 * * 1'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '**/Cargo.toml'
+
+jobs:
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run security audit
+        run: cargo audit
+
+      - name: Check for outdated dependencies
+        run: |
+          cargo install cargo-outdated || true
+          cargo outdated --exit-code 0 || echo "Some dependencies are outdated"

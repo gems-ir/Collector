@@ -53,7 +53,6 @@ pub struct ArgsCollector {
     /// Verbose log
     #[arg(short, long)]
     pub verbose: bool,
-
 }
 
 #[derive(Subcommand, Debug)]
@@ -67,7 +66,6 @@ pub struct ResourcesArgs {
     #[command(subcommand)]
     pub command: ListResources,
 }
-
 
 #[derive(Debug, Subcommand)]
 pub enum ListResources {

@@ -128,7 +128,6 @@ pub enum CollectorError {
 
 pub type Result<T> = std::result::Result<T, CollectorError>;
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

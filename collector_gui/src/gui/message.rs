@@ -1,5 +1,5 @@
-use crate::com::collection::CollectionResult;
 use crate::com::Resource;
+use crate::com::collection::CollectionResult;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone)]

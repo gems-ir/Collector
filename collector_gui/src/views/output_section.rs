@@ -1,8 +1,8 @@
-use iced::widget::{checkbox, column, container, row, text, text_input, Space, scrollable};
+use iced::widget::{Space, checkbox, column, container, row, scrollable, text, text_input};
 use iced::{Alignment, Element, Length};
 
-use crate::gui::message::Message;
 use crate::gui::CollectorApp;
+use crate::gui::message::Message;
 use crate::style::icons::{self, icon_small};
 use crate::style::theme::{card_style, section_header_style};
 
@@ -20,8 +20,8 @@ pub fn view_output_section(app: &CollectorApp) -> Element<'_, Message> {
             .on_toggle(Message::ToggleZip)
             .text_size(13),
     ]
-        .spacing(8)
-        .align_y(Alignment::Center);
+    .spacing(8)
+    .align_y(Alignment::Center);
 
     let mut content = column![zip_row].spacing(12);
 
@@ -33,9 +33,8 @@ pub fn view_output_section(app: &CollectorApp) -> Element<'_, Message> {
                 .on_toggle(Message::ToggleZipPassword)
                 .text_size(13),
         ]
-            .spacing(8)
-            .align_y(Alignment::Center);
-
+        .spacing(8)
+        .align_y(Alignment::Center);
 
         if app.zip_password_enabled {
             let pass_input = text_input("Enter ZIP password...", &app.zip_password)
@@ -54,10 +53,7 @@ pub fn view_output_section(app: &CollectorApp) -> Element<'_, Message> {
 
     content = content.push(Space::new().height(Length::FillPortion(10)));
 
-    let card_content = scrollable(
-        column![header, container(content).padding(15)]
-            .spacing(0)
-    );
+    let card_content = scrollable(column![header, container(content).padding(15)].spacing(0));
 
     container(card_content)
         .height(Length::Fill)

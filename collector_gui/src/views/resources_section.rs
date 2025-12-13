@@ -1,8 +1,8 @@
 use iced::widget::{checkbox, column, container, pick_list, row, text, text_input};
 use iced::{Alignment, Element, Length};
 
-use crate::gui::message::Message;
 use crate::gui::CollectorApp;
+use crate::gui::message::Message;
 use crate::style::icons::{self, icon_small};
 use crate::style::theme::card_style;
 use crate::views::view_resources_table;
@@ -37,8 +37,8 @@ fn view_filter_bar(app: &CollectorApp) -> Element<'_, Message> {
         Some(app.selected_category.clone()),
         Message::CategorySelected,
     )
-        .placeholder("All Categories")
-        .padding([4, 8]);
+    .placeholder("All Categories")
+    .padding([4, 8]);
 
     let show_selected_checkbox = checkbox(app.show_selected_only)
         .label("Selected only")
@@ -46,24 +46,18 @@ fn view_filter_bar(app: &CollectorApp) -> Element<'_, Message> {
         .text_size(12);
 
     row![
-        row![
-            search_icon,
-            search_input
-        ]
+        row![search_icon, search_input]
             .spacing(5)
             .align_y(Alignment::Center),
-        row![
-            text("Category:").size(13),
-            category_picker
-        ]
+        row![text("Category:").size(13), category_picker]
             .spacing(5)
             .align_y(Alignment::Center),
         show_selected_checkbox,
     ]
-        .align_y(Alignment::Center)
-        .padding([10, 15])
-        .spacing(20)
-        .into()
+    .align_y(Alignment::Center)
+    .padding([10, 15])
+    .spacing(20)
+    .into()
 }
 
 /// Displaying selected resources
@@ -78,12 +72,14 @@ fn view_selected_resources(app: &CollectorApp) -> Element<'_, Message> {
             app.checked_resources.len(),
             app.checked_resources.join(", ")
         ))
-            .size(12)
+        .size(12)
     };
 
-    container(row![check_icon, selected_text]
-        .spacing(8)
-        .align_y(Alignment::Center))
-        .padding([8, 15])
-        .into()
+    container(
+        row![check_icon, selected_text]
+            .spacing(8)
+            .align_y(Alignment::Center),
+    )
+    .padding([8, 15])
+    .into()
 }

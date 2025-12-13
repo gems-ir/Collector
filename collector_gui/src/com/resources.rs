@@ -1,6 +1,6 @@
-use std::collections::HashSet;
-use collector_core::prelude::*;
 use crate::com::config::Config;
+use collector_core::prelude::*;
+use std::collections::HashSet;
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Resource {
@@ -28,7 +28,7 @@ pub async fn load_resources(config: &Config) -> Vec<Resource> {
 
     artifacts
         .iter()
-        .filter(|a| a.artifact.path.is_some())
+        // .filter(|a| a.artifact.path.is_some())
         .map(|artifact| {
             let name = artifact.metadata.name.clone();
             let is_checked = config
@@ -67,14 +67,16 @@ pub fn filter_resources(
     checked_resources: &[String],
 ) -> Vec<Resource> {
     let query = search_query.to_lowercase();
-    
+
     resources
         .iter()
         .filter(|resource| {
             let name_matches = query.is_empty() || resource.name.to_lowercase().contains(&query);
-            let category_matches = selected_category == "All" || resource.category == selected_category;
-            let selected_matches = !show_selected_only || checked_resources.contains(&resource.name);
-            
+            let category_matches =
+                selected_category == "All" || resource.category == selected_category;
+            let selected_matches =
+                !show_selected_only || checked_resources.contains(&resource.name);
+
             name_matches && category_matches && selected_matches
         })
         .cloned()

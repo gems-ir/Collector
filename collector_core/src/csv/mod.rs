@@ -79,7 +79,7 @@ pub struct CsvLogFile {
 impl CsvLogFile {
     pub async fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path_str = path.as_ref().to_string_lossy().to_string();
-        
+
         let csv_file = OpenOptions::new()
             .create(true)
             .write(true)
@@ -98,7 +98,10 @@ impl CsvLogFile {
             AsyncWriterBuilder::new().create_serializer(csv_file)
         };
 
-        Ok(Self { csv_writer, file_path: path_str })
+        Ok(Self {
+            csv_writer,
+            file_path: path_str,
+        })
     }
 
     pub async fn add_row(&mut self, item: CsvLogItem) -> Result<()> {
@@ -127,8 +130,6 @@ impl CsvLogFile {
         matches!(reader.headers().await, Ok(h) if !h.is_empty())
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -179,7 +180,7 @@ mod tests {
 
         let mut logger = CsvLogFile::new(&csv_path).await.unwrap();
         let item = CsvLogItem::with_paths("source", "dest");
-        
+
         let result = logger.add_row(item).await;
         assert!(result.is_ok());
     }

@@ -1,11 +1,11 @@
 mod com;
 mod gui;
-mod views;
-mod utils;
 mod style;
+mod utils;
+mod views;
 
-use iced::window::{Settings, icon};
 use iced::Size;
+use iced::window::{Settings, icon};
 
 use crate::gui::CollectorApp;
 

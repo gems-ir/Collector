@@ -1,10 +1,9 @@
-
 use std::path::PathBuf;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::extract::lowfs;
 use crate::error::{CollectorError, Result};
+use crate::extract::lowfs;
 
 #[cfg(target_os = "windows")]
 use crate::mount::VssSnapshot;
@@ -12,21 +11,31 @@ use crate::mount::VssSnapshot;
 use regex::Regex;
 
 pub async fn extract_via_filesystem(source: &PathBuf, dest_file: &mut File) -> Result<u64> {
-    let mut source_file = File::open(source).await.map_err(|e| CollectorError::FileRead {
-        path: source.clone(),
-        source: e,
-    })?;
+    let mut source_file = File::open(source)
+        .await
+        .map_err(|e| CollectorError::FileRead {
+            path: source.clone(),
+            source: e,
+        })?;
 
     let mut contents = Vec::new();
-    source_file.read_to_end(&mut contents).await.map_err(|e| {
-        CollectorError::FileRead { path: source.clone(), source: e }
-    })?;
+    source_file
+        .read_to_end(&mut contents)
+        .await
+        .map_err(|e| CollectorError::FileRead {
+            path: source.clone(),
+            source: e,
+        })?;
 
     let bytes_written = contents.len() as u64;
-    
-    dest_file.write_all(&contents).await.map_err(|e| {
-        CollectorError::FileWrite { path: source.clone(), source: e }
-    })?;
+
+    dest_file
+        .write_all(&contents)
+        .await
+        .map_err(|e| CollectorError::FileWrite {
+            path: source.clone(),
+            source: e,
+        })?;
 
     log::info!("Extracted via filesystem: {}", source.display());
     Ok(bytes_written)
@@ -39,7 +48,7 @@ pub async fn extract_via_ntfs(
     vss_snapshot: Option<&VssSnapshot>,
 ) -> Result<u64> {
     let drive_letter = get_drive_letter(source)?;
-    
+
     let mut volume_entry = drive_letter.clone();
     if volume_entry.ends_with('\\') {
         volume_entry.pop();
@@ -53,7 +62,7 @@ pub async fn extract_via_ntfs(
 
     let relative_path = source.to_string_lossy().replace(&drive_letter, "");
     let bytes = lowfs::extract_ntfs(build_source, relative_path, dest_file).await?;
-    
+
     log::info!("Extracted via NTFS: {}", source.display());
     Ok(bytes)
 }
@@ -94,7 +103,6 @@ fn get_drive_letter(path: &PathBuf) -> Result<String> {
         .ok_or_else(|| CollectorError::InvalidDriveLetter(path_str.to_string()))
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,7 +112,7 @@ mod tests {
     #[tokio::test]
     async fn test_extract_via_filesystem() {
         let temp_dir = tempdir().unwrap();
-        
+
         // Create source file
         let source_path = temp_dir.path().join("source.txt");
         let mut source_file = File::create(&source_path).await.unwrap();

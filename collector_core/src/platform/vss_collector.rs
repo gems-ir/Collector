@@ -46,7 +46,11 @@ impl VssCollector {
         let vss = Vss::new(&self.drive_letter);
         let snapshots = vss.get_snapshots()?;
 
-        log::info!("Found {} VSS snapshots for {}", snapshots.len(), self.drive_letter);
+        log::info!(
+            "Found {} VSS snapshots for {}",
+            snapshots.len(),
+            self.drive_letter
+        );
 
         let temp_base = std::env::temp_dir();
         let temp_dir = temp_base.join(Uuid::new_v4().to_string());
@@ -56,7 +60,10 @@ impl VssCollector {
         let mut combined_stats = CollectionStats::default();
 
         for snapshot in snapshots {
-            log::info!("Processing snapshot: {}", snapshot.snapshot_id().unwrap_or("unknown"));
+            log::info!(
+                "Processing snapshot: {}",
+                snapshot.snapshot_id().unwrap_or("unknown")
+            );
 
             match self.collect_from_snapshot(&snapshot, &temp_dir).await {
                 Ok(stats) => {
@@ -77,13 +84,18 @@ impl VssCollector {
         Ok(combined_stats)
     }
 
-    async fn collect_from_snapshot(&self, snapshot: &VssSnapshot, temp_dir: &PathBuf) -> Result<CollectionStats> {
+    async fn collect_from_snapshot(
+        &self,
+        snapshot: &VssSnapshot,
+        temp_dir: &PathBuf,
+    ) -> Result<CollectionStats> {
         let mount_point = Vss::mount_snapshot(snapshot, temp_dir).await?;
 
         if mount_point.is_symlink() {
-            let mut collector = ArtifactCollector::new(&mount_point, &self.destination, self.patterns.clone())
-                .await?
-                .with_vss_snapshot(snapshot.clone());
+            let mut collector =
+                ArtifactCollector::new(&mount_point, &self.destination, self.patterns.clone())
+                    .await?
+                    .with_vss_snapshot(snapshot.clone());
 
             collector.collect().await
         } else {

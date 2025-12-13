@@ -82,11 +82,17 @@ pub struct Artifact {
 
 impl Artifact {
     pub fn with_paths(paths: Vec<String>) -> Self {
-        Self { path: Some(paths), group: None }
+        Self {
+            path: Some(paths),
+            group: None,
+        }
     }
 
     pub fn with_group(group: Vec<String>) -> Self {
-        Self { path: None, group: Some(group) }
+        Self {
+            path: None,
+            group: Some(group),
+        }
     }
 
     pub fn is_valid(&self) -> bool {

@@ -13,7 +13,6 @@ pub struct CollectionProgress {
 pub struct CollectionResult {
     pub success: bool,
     pub message: String,
-
     // TO REMOVE
     // stats: Option<CollectionStats>,
 }
@@ -31,58 +30,72 @@ pub async fn run_collection(
     // Parse resources
     let mut parser = match ResourcesParser::new(&resource_path) {
         Ok(p) => p,
-        Err(e) => return CollectionResult {
-            success: false,
-            message: format!("Failed to parse resources: {}", e),
-            // stats: None,
-        },
+        Err(e) => {
+            return CollectionResult {
+                success: false,
+                message: format!("Failed to parse resources: {}", e),
+                // stats: None,
+            };
+        }
     };
 
     let artifacts = match parser.get_doc_struct().await {
         Ok(a) => a,
-        Err(e) => return CollectionResult {
-            success: false,
-            message: format!("Failed to load artifacts: {}", e),
-            // stats: None,
-        },
+        Err(e) => {
+            return CollectionResult {
+                success: false,
+                message: format!("Failed to load artifacts: {}", e),
+                // stats: None,
+            };
+        }
     };
 
     let patterns = match parser.select_artifact(resources, &artifacts) {
         Ok(p) => p,
-        Err(e) => return CollectionResult {
-            success: false,
-            message: format!("Failed to select artifacts: {}", e),
-            // stats: None,
-        },
+        Err(e) => {
+            return CollectionResult {
+                success: false,
+                message: format!("Failed to select artifacts: {}", e),
+                // stats: None,
+            };
+        }
     };
 
     // Create collector
-    let mut collector = match ArtifactCollector::new(&source, &destination, patterns.clone()).await {
+    let mut collector = match ArtifactCollector::new(&source, &destination, patterns.clone()).await
+    {
         Ok(c) => c,
-        Err(e) => return CollectionResult {
-            success: false,
-            message: format!("Failed to create collector: {}", e),
-            // stats: None,
-        },
+        Err(e) => {
+            return CollectionResult {
+                success: false,
+                message: format!("Failed to create collector: {}", e),
+                // stats: None,
+            };
+        }
     };
 
     // Collect with progress
     let sender = Arc::new(progress_sender);
     let stats = {
         let sender = sender.clone();
-        match collector.collect_with_progress(move |current, total, path| {
-            let _ = sender.send(CollectionProgress {
-                current,
-                total,
-                current_file: path.to_string(),
-            });
-        }).await {
+        match collector
+            .collect_with_progress(move |current, total, path| {
+                let _ = sender.send(CollectionProgress {
+                    current,
+                    total,
+                    current_file: path.to_string(),
+                });
+            })
+            .await
+        {
             Ok(s) => s,
-            Err(e) => return CollectionResult {
-                success: false,
-                message: format!("Collection failed: {}", e),
-                // stats: None,
-            },
+            Err(e) => {
+                return CollectionResult {
+                    success: false,
+                    message: format!("Collection failed: {}", e),
+                    // stats: None,
+                };
+            }
         }
     };
 

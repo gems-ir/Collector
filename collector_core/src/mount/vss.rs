@@ -7,17 +7,17 @@ use std::path::PathBuf;
 use std::ptr::null_mut;
 
 use tokio::fs;
-use widestring::{encode_utf16, U16CStr};
+use widestring::{U16CStr, encode_utf16};
 use winapi::shared::rpcdce::{RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE};
 use winapi::shared::winerror::{E_ACCESSDENIED, E_INVALIDARG, S_OK};
 use winapi::um::cguid::GUID_NULL;
-use winapi::um::combaseapi::{CoInitializeEx, CoInitializeSecurity, COINITBASE_MULTITHREADED};
+use winapi::um::combaseapi::{COINITBASE_MULTITHREADED, CoInitializeEx, CoInitializeSecurity};
 use winapi::um::fileapi::GetVolumeNameForVolumeMountPointW;
 use winapi::um::objidl::EOAC_DYNAMIC_CLOAKING;
 use winapi::um::vsbackup::{CreateVssBackupComponents, IVssBackupComponents};
 use winapi::um::vss::{
-    IVssEnumObject, VSS_BT_FULL, VSS_CTX_ALL, VSS_OBJECT_NONE, VSS_OBJECT_PROP, VSS_OBJECT_SNAPSHOT,
-    VSS_SNAPSHOT_PROP,
+    IVssEnumObject, VSS_BT_FULL, VSS_CTX_ALL, VSS_OBJECT_NONE, VSS_OBJECT_PROP,
+    VSS_OBJECT_SNAPSHOT, VSS_SNAPSHOT_PROP,
 };
 use winapi::um::winnt::HRESULT;
 
@@ -42,7 +42,9 @@ pub struct Vss {
 
 impl Vss {
     pub fn new<S: Into<String>>(drive_letter: S) -> Self {
-        Self { drive_letter: drive_letter.into() }
+        Self {
+            drive_letter: drive_letter.into(),
+        }
     }
 
     pub fn drive_letter(&self) -> &str {
@@ -54,10 +56,12 @@ impl Vss {
 
         let volume_name = DriveLetter::new(&self.drive_letter)
             .to_volume()
-            .ok_or_else(|| CollectorError::VssOperation(format!(
-                "Failed to get volume for {}",
-                self.drive_letter
-            )))?;
+            .ok_or_else(|| {
+                CollectorError::VssOperation(format!(
+                    "Failed to get volume for {}",
+                    self.drive_letter
+                ))
+            })?;
 
         let filtered: Vec<VssSnapshot> = all_snapshots
             .into_iter()
@@ -94,7 +98,9 @@ pub struct DriveLetter {
 
 impl DriveLetter {
     pub fn new<S: Into<String>>(letter: S) -> Self {
-        Self { letter: letter.into() }
+        Self {
+            letter: letter.into(),
+        }
     }
 
     pub fn to_volume(&self) -> Option<String> {
@@ -106,7 +112,11 @@ impl DriveLetter {
         let mut buffer = [0u16; VOLUME_MAX_LEN];
 
         let result = unsafe {
-            GetVolumeNameForVolumeMountPointW(drive_path.as_ptr(), buffer.as_mut_ptr(), VOLUME_MAX_LEN as u32)
+            GetVolumeNameForVolumeMountPointW(
+                drive_path.as_ptr(),
+                buffer.as_mut_ptr(),
+                VOLUME_MAX_LEN as u32,
+            )
         };
 
         if result == 0 {
@@ -134,9 +144,15 @@ fn list_all_snapshots() -> Result<Vec<VssSnapshot>> {
         check_hresult(hr, "CoInitializeEx")?;
 
         let hr = CoInitializeSecurity(
-            null_mut(), -1, null_mut(), null_mut(),
-            RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE,
-            null_mut(), EOAC_DYNAMIC_CLOAKING, null_mut(),
+            null_mut(),
+            -1,
+            null_mut(),
+            null_mut(),
+            RPC_C_AUTHN_LEVEL_PKT_PRIVACY,
+            RPC_C_IMP_LEVEL_IMPERSONATE,
+            null_mut(),
+            EOAC_DYNAMIC_CLOAKING,
+            null_mut(),
         );
         check_hresult(hr, "CoInitializeSecurity")?;
 
@@ -148,10 +164,24 @@ fn list_all_snapshots() -> Result<Vec<VssSnapshot>> {
 
         let backup = backup_components.as_ref().unwrap();
 
-        check_hresult(backup.InitializeForBackup(null_mut()), "InitializeForBackup")?;
+        check_hresult(
+            backup.InitializeForBackup(null_mut()),
+            "InitializeForBackup",
+        )?;
         check_hresult(backup.SetContext(VSS_CTX_ALL as i32), "SetContext")?;
-        check_hresult(backup.SetBackupState(true, true, VSS_BT_FULL, false), "SetBackupState")?;
-        check_hresult(backup.Query(GUID_NULL, VSS_OBJECT_NONE, VSS_OBJECT_SNAPSHOT, &mut enum_object), "Query")?;
+        check_hresult(
+            backup.SetBackupState(true, true, VSS_BT_FULL, false),
+            "SetBackupState",
+        )?;
+        check_hresult(
+            backup.Query(
+                GUID_NULL,
+                VSS_OBJECT_NONE,
+                VSS_OBJECT_SNAPSHOT,
+                &mut enum_object,
+            ),
+            "Query",
+        )?;
 
         let enum_obj = enum_object.as_ref().unwrap();
         let mut fetched: u32 = 0;
@@ -166,9 +196,16 @@ fn list_all_snapshots() -> Result<Vec<VssSnapshot>> {
             let snap: &VSS_SNAPSHOT_PROP = prop.Obj.Snap();
             let mut snap_props: VSS_SNAPSHOT_PROP = zeroed();
 
-            if IVssBackupComponents::GetSnapshotProperties(&*backup_components, snap.m_SnapshotId, &mut snap_props) == S_OK {
-                let original = U16CStr::from_ptr_str(snap_props.m_pwszOriginalVolumeName).to_string_lossy();
-                let device = U16CStr::from_ptr_str(snap_props.m_pwszSnapshotDeviceObject).to_string_lossy();
+            if IVssBackupComponents::GetSnapshotProperties(
+                &*backup_components,
+                snap.m_SnapshotId,
+                &mut snap_props,
+            ) == S_OK
+            {
+                let original =
+                    U16CStr::from_ptr_str(snap_props.m_pwszOriginalVolumeName).to_string_lossy();
+                let device =
+                    U16CStr::from_ptr_str(snap_props.m_pwszSnapshotDeviceObject).to_string_lossy();
 
                 snapshots.push(VssSnapshot {
                     original_volume_name: original,
@@ -185,11 +222,16 @@ fn check_hresult(hr: HRESULT, operation: &str) -> Result<()> {
     match hr {
         S_OK => Ok(()),
         E_ACCESSDENIED => Err(CollectorError::InsufficientPrivileges),
-        E_INVALIDARG => Err(CollectorError::VssOperation(format!("{}: Invalid argument", operation))),
-        _ => Err(CollectorError::VssComInit(format!("{} failed: 0x{:08X}", operation, hr))),
+        E_INVALIDARG => Err(CollectorError::VssOperation(format!(
+            "{}: Invalid argument",
+            operation
+        ))),
+        _ => Err(CollectorError::VssComInit(format!(
+            "{} failed: 0x{:08X}",
+            operation, hr
+        ))),
     }
 }
-
 
 #[cfg(test)]
 mod tests {

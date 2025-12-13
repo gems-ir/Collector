@@ -3,7 +3,6 @@ use serde::Deserialize;
 use std::fs;
 use std::path::Path;
 
-
 #[derive(Deserialize, Clone)]
 pub(crate) struct Config {
     source_path: String,

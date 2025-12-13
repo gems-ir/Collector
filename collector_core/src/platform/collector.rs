@@ -11,7 +11,7 @@ use tokio::task::spawn_blocking;
 use crate::csv::{CsvLogFile, CsvLogItem};
 use crate::error::{CollectorError, Result};
 use crate::extract::extract_file;
-use crate::utils::{require_admin, FormatSource, HASH_BUFFER_SIZE};
+use crate::utils::{FormatSource, HASH_BUFFER_SIZE, require_admin};
 use crate::writer::Writer;
 
 #[cfg(target_os = "windows")]
@@ -121,10 +121,7 @@ impl ArtifactCollector {
     }
 
     /// Collect all artifacts with progress callback
-    pub async fn collect_with_progress<F>(
-        &mut self,
-        callback: F,
-    ) -> Result<CollectionStats>
+    pub async fn collect_with_progress<F>(&mut self, callback: F) -> Result<CollectionStats>
     where
         F: Fn(u64, u64, &str) + Send + Sync + 'static,
     {
@@ -132,10 +129,7 @@ impl ArtifactCollector {
     }
 
     /// Internal collection implementation
-    async fn collect_internal<F>(
-        &mut self,
-        callback: Option<F>,
-    ) -> Result<CollectionStats>
+    async fn collect_internal<F>(&mut self, callback: Option<F>) -> Result<CollectionStats>
     where
         F: Fn(u64, u64, &str),
     {
@@ -261,10 +255,12 @@ impl ArtifactCollector {
             let mut buffer = [0u8; HASH_BUFFER_SIZE];
 
             loop {
-                let bytes_read = file.read(&mut buffer).map_err(|e| CollectorError::FileRead {
-                    path: path.clone(),
-                    source: e,
-                })?;
+                let bytes_read = file
+                    .read(&mut buffer)
+                    .map_err(|e| CollectorError::FileRead {
+                        path: path.clone(),
+                        source: e,
+                    })?;
 
                 if bytes_read == 0 {
                     break;
@@ -322,8 +318,7 @@ mod tests {
         std::fs::create_dir_all(&source).unwrap();
         std::fs::create_dir_all(&dest).unwrap();
 
-        let collector =
-            ArtifactCollector::new(&source, &dest, vec!["*.txt".to_string()]).await;
+        let collector = ArtifactCollector::new(&source, &dest, vec!["*.txt".to_string()]).await;
 
         assert!(collector.is_ok());
     }

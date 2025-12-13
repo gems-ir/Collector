@@ -21,9 +21,11 @@ pub struct ResourcesParser {
 impl ResourcesParser {
     pub fn new<P: AsRef<Path>>(resource_path: P) -> Result<Self> {
         let path = resource_path.as_ref();
-        
+
         if !path.exists() {
-            return Err(CollectorError::ResourcesDirectoryNotFound(path.to_path_buf()));
+            return Err(CollectorError::ResourcesDirectoryNotFound(
+                path.to_path_buf(),
+            ));
         }
 
         let mut format_path = FormatSource::new(path);
@@ -65,9 +67,12 @@ impl ResourcesParser {
     }
 
     async fn parse_yaml_file(&self, path: &Path) -> Result<Vec<YamlArtifact>> {
-        let content = fs::read_to_string(path).await.map_err(|e| {
-            CollectorError::FileRead { path: path.to_path_buf(), source: e }
-        })?;
+        let content = fs::read_to_string(path)
+            .await
+            .map_err(|e| CollectorError::FileRead {
+                path: path.to_path_buf(),
+                source: e,
+            })?;
 
         let mut artifacts = Vec::new();
 
@@ -173,12 +178,17 @@ impl ResourcesParser {
         artifacts.iter().map(|a| a.metadata.name.clone()).collect()
     }
 
-    pub fn get_by_category(artifacts: &[YamlArtifact]) -> std::collections::HashMap<String, Vec<String>> {
+    pub fn get_by_category(
+        artifacts: &[YamlArtifact],
+    ) -> std::collections::HashMap<String, Vec<String>> {
         let mut categories = std::collections::HashMap::new();
 
         for artifact in artifacts {
             let category = artifact.metadata.category_or_default().to_string();
-            categories.entry(category).or_insert_with(Vec::new).push(artifact.metadata.name.clone());
+            categories
+                .entry(category)
+                .or_insert_with(Vec::new)
+                .push(artifact.metadata.name.clone());
         }
 
         categories
@@ -216,13 +226,16 @@ fn normalize_artifact_path(path: &str) -> String {
     normalized
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::prelude::*;
     use super::*;
+    use crate::prelude::*;
 
-    fn create_test_artifact(name: &str, paths: Option<Vec<&str>>, group: Option<Vec<&str>>) -> YamlArtifact {
+    fn create_test_artifact(
+        name: &str,
+        paths: Option<Vec<&str>>,
+        group: Option<Vec<&str>>,
+    ) -> YamlArtifact {
         YamlArtifact {
             metadata: Metadata {
                 name: name.to_string(),
@@ -241,7 +254,10 @@ mod tests {
 
     #[test]
     fn test_normalize_artifact_path() {
-        assert_eq!(normalize_artifact_path("\\Windows\\System32"), "Windows\\System32");
+        assert_eq!(
+            normalize_artifact_path("\\Windows\\System32"),
+            "Windows\\System32"
+        );
         assert_eq!(normalize_artifact_path("/home/user"), "home/user");
         assert_eq!(normalize_artifact_path("\\\\path"), "path");
         assert_eq!(normalize_artifact_path("normal/path"), "normal/path");
@@ -286,7 +302,7 @@ mod tests {
 
         let result = parser.select_artifact(vec!["MFT".to_string()], &artifacts);
         assert!(result.is_ok());
-        
+
         let patterns = result.unwrap();
         assert_eq!(patterns.len(), 1);
         assert_eq!(patterns[0], "$MFT");
@@ -308,7 +324,7 @@ mod tests {
 
         let result = parser.select_artifact(vec!["NTFS".to_string()], &artifacts);
         assert!(result.is_ok());
-        
+
         let patterns = result.unwrap();
         assert_eq!(patterns.len(), 2);
         assert!(patterns.contains(&"$MFT".to_string()));
@@ -317,9 +333,7 @@ mod tests {
 
     #[test]
     fn test_select_artifact_not_found() {
-        let artifacts = vec![
-            create_test_artifact("MFT", Some(vec!["\\$MFT"]), None),
-        ];
+        let artifacts = vec![create_test_artifact("MFT", Some(vec!["\\$MFT"]), None)];
 
         let mut parser = YamlParser {
             resource_path: FormatSource::new("."),
@@ -329,7 +343,7 @@ mod tests {
 
         let result = parser.select_artifact(vec!["NonExistent".to_string()], &artifacts);
         assert!(result.is_err());
-        
+
         match result.unwrap_err() {
             CollectorError::ResourceNotFound(name) => assert_eq!(name, "NonExistent"),
             _ => panic!("Expected ResourceNotFound error"),

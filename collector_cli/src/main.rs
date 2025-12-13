@@ -11,7 +11,9 @@ use clap::Parser;
 use collector_core::prelude::*;
 use config::Config;
 use log::LevelFilter;
-use simplelog::{ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, WriteLogger};
+use simplelog::{
+    ColorChoice, CombinedLogger, ConfigBuilder, TermLogger, TerminalMode, WriteLogger,
+};
 use std::fs::File;
 use std::time::Instant;
 
@@ -27,23 +29,26 @@ fn setup_logging(args: &ArgsCollector, log_filename: &str) -> Result<()> {
             .build()
     };
 
-    let file = File::create(log_filename)
-        .map_err(|e| CollectorError::FileWrite { 
-            path: log_filename.into(), 
-            source: e 
-        })?;
+    let file = File::create(log_filename).map_err(|e| CollectorError::FileWrite {
+        path: log_filename.into(),
+        source: e,
+    })?;
 
     let loggers: Vec<Box<dyn simplelog::SharedLogger>> = if args.log {
         vec![
-            TermLogger::new(LevelFilter::Info, config.clone(), TerminalMode::Mixed, ColorChoice::Auto),
+            TermLogger::new(
+                LevelFilter::Info,
+                config.clone(),
+                TerminalMode::Mixed,
+                ColorChoice::Auto,
+            ),
             WriteLogger::new(LevelFilter::Info, config, file),
         ]
     } else {
         vec![WriteLogger::new(LevelFilter::Info, config, file)]
     };
 
-    CombinedLogger::init(loggers)
-        .map_err(|e| CollectorError::Config(e.to_string()))?;
+    CombinedLogger::init(loggers).map_err(|e| CollectorError::Config(e.to_string()))?;
 
     Ok(())
 }
@@ -68,10 +73,11 @@ async fn handle_resources_command(args: &ArgsCollector, cmd: &ListResources) -> 
     match cmd {
         ListResources::Targets => {
             println!("\n┌─ Available Targets ─────────────────────────────┐");
-            let targets: Vec<_> = artifacts.iter()
+            let targets: Vec<_> = artifacts
+                .iter()
                 .filter(|a| a.artifact.path.is_some())
                 .collect();
-            
+
             for artifact in targets {
                 let category = artifact.metadata.category.as_deref().unwrap_or("Other");
                 println!("│  {:<30} [{}]", artifact.metadata.name, category);
@@ -84,7 +90,11 @@ async fn handle_resources_command(args: &ArgsCollector, cmd: &ListResources) -> 
                 println!("│  {}", artifact.metadata.name);
                 if let Some(groups) = &artifact.artifact.group {
                     for (i, g) in groups.iter().enumerate() {
-                        let prefix = if i == groups.len() - 1 { "└──" } else { "├──" };
+                        let prefix = if i == groups.len() - 1 {
+                            "└──"
+                        } else {
+                            "├──"
+                        };
                         println!("│     {} {}", prefix, g);
                     }
                 }
@@ -96,7 +106,7 @@ async fn handle_resources_command(args: &ArgsCollector, cmd: &ListResources) -> 
             let categories = ResourcesParser::get_by_category(&artifacts);
             let mut sorted_categories: Vec<_> = categories.iter().collect();
             sorted_categories.sort_by_key(|(k, _)| *k);
-            
+
             for (category, names) in sorted_categories {
                 println!("│");
                 println!("│  [{}]", category);
@@ -141,11 +151,11 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
     // Parse resources
     println!("\n[1/4] Parsing resource files...");
     log::info!("Parsing resource files");
-    
+
     let mut parser = ResourcesParser::new(&args.path_resources)?;
     let artifacts = parser.get_doc_struct().await?;
     let patterns = parser.select_artifact(args.resources.clone(), &artifacts)?;
-    
+
     println!("      Found {} artifact patterns", patterns.len());
     log::info!("Found {} artifact patterns", patterns.len());
 
@@ -159,12 +169,9 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
     // Create collector
     println!("\n[2/4] Initializing collector...");
     log::info!("Initializing collector");
-    
-    let mut collector = ArtifactCollector::new(
-        &args.source,
-        &args.destination,
-        patterns.clone(),
-    ).await?;
+
+    let mut collector =
+        ArtifactCollector::new(&args.source, &args.destination, patterns.clone()).await?;
 
     let total_files = collector.count_files();
     println!("      Found {} files to collect", total_files);
@@ -173,21 +180,27 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
     // Collect
     println!("\n[3/4] Collecting artifacts...");
     log::info!("Starting collection");
-    
+
     let timer = Instant::now();
     let stats = collector.collect().await?;
     let elapsed = timer.elapsed();
 
-    println!("      Collected {} files ({})", stats.files_collected, format_bytes(stats.bytes_collected));
+    println!(
+        "      Collected {} files ({})",
+        stats.files_collected,
+        format_bytes(stats.bytes_collected)
+    );
     if verbose {
-        println!("      Filesystem extractions: {}", stats.filesystem_extractions);
+        println!(
+            "      Filesystem extractions: {}",
+            stats.filesystem_extractions
+        );
         println!("      NTFS extractions: {}", stats.ntfs_extractions);
         println!("      Failed extractions: {}", stats.failed_extractions);
     } else {
-        println!("      Filesystem: {} | NTFS: {} | Failed: {}", 
-            stats.filesystem_extractions, 
-            stats.ntfs_extractions, 
-            stats.failed_extractions
+        println!(
+            "      Filesystem: {} | NTFS: {} | Failed: {}",
+            stats.filesystem_extractions, stats.ntfs_extractions, stats.failed_extractions
         );
     }
     log::info!("Collection complete: {} files", stats.files_collected);
@@ -197,16 +210,13 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
     if args.vss {
         println!("\n[3b/4] Collecting from VSS snapshots...");
         log::info!("Starting VSS collection");
-        
-        let mut vss_collector = VssCollector::new(
-            &args.source,
-            &args.destination,
-            patterns,
-        );
-        
+
+        let mut vss_collector = VssCollector::new(&args.source, &args.destination, patterns);
+
         match vss_collector.collect_from_snapshots().await {
             Ok(vss_stats) => {
-                println!("      VSS: {} files collected ({})", 
+                println!(
+                    "      VSS: {} files collected ({})",
                     vss_stats.files_collected,
                     format_bytes(vss_stats.bytes_collected)
                 );
@@ -215,7 +225,10 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
                     println!("      VSS NTFS: {}", vss_stats.ntfs_extractions);
                     println!("      VSS Failed: {}", vss_stats.failed_extractions);
                 }
-                log::info!("VSS collection complete: {} files", vss_stats.files_collected);
+                log::info!(
+                    "VSS collection complete: {} files",
+                    vss_stats.files_collected
+                );
             }
             Err(e) => {
                 println!("      VSS collection failed: {}", e);
@@ -228,7 +241,7 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
     if args.zip {
         println!("\n[4/4] Creating ZIP archive...");
         log::info!("Creating ZIP archive");
-        
+
         collector.create_archive(args.pass).await?;
         println!("      Archive created successfully");
         log::info!("Archive created");

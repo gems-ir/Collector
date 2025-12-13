@@ -1,7 +1,7 @@
 use iced::widget::{button, container, progress_bar};
 use iced::{Border, Color};
 
-/// Colors of Collector theme 
+/// Colors of Collector theme
 pub mod colors {
     use iced::Color;
 
@@ -32,13 +32,28 @@ pub mod colors {
 /// Style for cards/containers with border
 pub fn card_style(is_dark: bool) -> container::Style {
     container::Style {
-        background: Some(if is_dark { colors::DARK_CARD } else { colors::LIGHT_CARD }.into()),
+        background: Some(
+            if is_dark {
+                colors::DARK_CARD
+            } else {
+                colors::LIGHT_CARD
+            }
+            .into(),
+        ),
         border: Border {
-            color: if is_dark { colors::DARK_BORDER } else { colors::LIGHT_BORDER },
+            color: if is_dark {
+                colors::DARK_BORDER
+            } else {
+                colors::LIGHT_BORDER
+            },
             width: 1.0,
             radius: 8.0.into(),
         },
-        text_color: Some(if is_dark { colors::DARK_TEXT } else { colors::LIGHT_TEXT }),
+        text_color: Some(if is_dark {
+            colors::DARK_TEXT
+        } else {
+            colors::LIGHT_TEXT
+        }),
         ..Default::default()
     }
 }
@@ -57,7 +72,7 @@ pub fn section_header_style() -> container::Style {
     }
 }
 
-/// Style for table header 
+/// Style for table header
 pub fn table_header_style() -> container::Style {
     container::Style {
         background: Some(colors::TABLE_HEADER.into()),
@@ -74,8 +89,16 @@ pub fn table_header_style() -> container::Style {
 /// Style for alternating table rows
 pub fn table_row_style(is_dark: bool, is_alternate: bool) -> container::Style {
     let background = if is_alternate {
-        if is_dark { colors::TABLE_ROW_ALT_DARK } else { colors::TABLE_ROW_ALT }
-    } else if is_dark { colors::DARK_SURFACE } else { colors::LIGHT_SURFACE };
+        if is_dark {
+            colors::TABLE_ROW_ALT_DARK
+        } else {
+            colors::TABLE_ROW_ALT
+        }
+    } else if is_dark {
+        colors::DARK_SURFACE
+    } else {
+        colors::LIGHT_SURFACE
+    };
 
     container::Style {
         background: Some(background.into()),
@@ -100,10 +123,25 @@ pub fn primary_button_style(_theme: &iced::Theme, _status: button::Status) -> bu
 /// Style for secondary buttons (icons)
 pub fn icon_button_style(is_dark: bool) -> impl Fn(&iced::Theme, button::Status) -> button::Style {
     move |_theme: &iced::Theme, _status: button::Status| button::Style {
-        background: Some(if is_dark { colors::DARK_CARD } else { colors::LIGHT_SURFACE }.into()),
-        text_color: if is_dark { colors::DARK_TEXT } else { colors::LIGHT_TEXT },
+        background: Some(
+            if is_dark {
+                colors::DARK_CARD
+            } else {
+                colors::LIGHT_SURFACE
+            }
+            .into(),
+        ),
+        text_color: if is_dark {
+            colors::DARK_TEXT
+        } else {
+            colors::LIGHT_TEXT
+        },
         border: Border {
-            color: if is_dark { colors::DARK_BORDER } else { colors::LIGHT_BORDER },
+            color: if is_dark {
+                colors::DARK_BORDER
+            } else {
+                colors::LIGHT_BORDER
+            },
             width: 1.0,
             radius: 6.0.into(),
         },
@@ -114,8 +152,19 @@ pub fn icon_button_style(is_dark: bool) -> impl Fn(&iced::Theme, button::Status)
 /// Style for the main background of the application
 pub fn app_background_style(is_dark: bool) -> container::Style {
     container::Style {
-        background: Some(if is_dark { colors::DARK_BACKGROUND } else { colors::LIGHT_BACKGROUND }.into()),
-        text_color: Some(if is_dark { colors::DARK_TEXT } else { colors::LIGHT_TEXT }),
+        background: Some(
+            if is_dark {
+                colors::DARK_BACKGROUND
+            } else {
+                colors::LIGHT_BACKGROUND
+            }
+            .into(),
+        ),
+        text_color: Some(if is_dark {
+            colors::DARK_TEXT
+        } else {
+            colors::LIGHT_TEXT
+        }),
         ..Default::default()
     }
 }
@@ -123,9 +172,20 @@ pub fn app_background_style(is_dark: bool) -> container::Style {
 /// Style for the footer/status bar
 pub fn status_bar_style(is_dark: bool) -> container::Style {
     container::Style {
-        background: Some(if is_dark { colors::DARK_SURFACE } else { Color::from_rgb(0.93, 0.93, 0.93) }.into()),
+        background: Some(
+            if is_dark {
+                colors::DARK_SURFACE
+            } else {
+                Color::from_rgb(0.93, 0.93, 0.93)
+            }
+            .into(),
+        ),
         border: Border {
-            color: if is_dark { colors::DARK_BORDER } else { colors::LIGHT_BORDER },
+            color: if is_dark {
+                colors::DARK_BORDER
+            } else {
+                colors::LIGHT_BORDER
+            },
             width: 1.0,
             radius: 6.0.into(),
         },
@@ -144,13 +204,28 @@ pub fn modal_overlay_style() -> container::Style {
 /// Style for modal content
 pub fn modal_content_style(is_dark: bool) -> container::Style {
     container::Style {
-        background: Some(if is_dark { colors::DARK_CARD } else { colors::LIGHT_CARD }.into()),
+        background: Some(
+            if is_dark {
+                colors::DARK_CARD
+            } else {
+                colors::LIGHT_CARD
+            }
+            .into(),
+        ),
         border: Border {
-            color: if is_dark { colors::DARK_BORDER } else { colors::LIGHT_BORDER },
+            color: if is_dark {
+                colors::DARK_BORDER
+            } else {
+                colors::LIGHT_BORDER
+            },
             width: 1.0,
             radius: 12.0.into(),
         },
-        text_color: Some(if is_dark { colors::DARK_TEXT } else { colors::LIGHT_TEXT }),
+        text_color: Some(if is_dark {
+            colors::DARK_TEXT
+        } else {
+            colors::LIGHT_TEXT
+        }),
         ..Default::default()
     }
 }
@@ -171,9 +246,20 @@ pub fn badge_style() -> container::Style {
 /// Style for codes block
 pub fn code_block_style(is_dark: bool) -> container::Style {
     container::Style {
-        background: Some(if is_dark { colors::DARK_BACKGROUND } else { Color::from_rgb(0.95, 0.95, 0.95) }.into()),
+        background: Some(
+            if is_dark {
+                colors::DARK_BACKGROUND
+            } else {
+                Color::from_rgb(0.95, 0.95, 0.95)
+            }
+            .into(),
+        ),
         border: Border {
-            color: if is_dark { colors::DARK_BORDER } else { colors::LIGHT_BORDER },
+            color: if is_dark {
+                colors::DARK_BORDER
+            } else {
+                colors::LIGHT_BORDER
+            },
             width: 1.0,
             radius: 6.0.into(),
         },
@@ -184,12 +270,18 @@ pub fn code_block_style(is_dark: bool) -> container::Style {
 /// Style for progress bar
 pub fn progress_bar_style(is_dark: bool) -> impl Fn(&iced::Theme) -> progress_bar::Style {
     move |_theme: &iced::Theme| progress_bar::Style {
-        background: iced::Background::Color(
-            if is_dark { colors::DARK_SURFACE } else { Color::from_rgb(0.85, 0.85, 0.85) }
-        ),
+        background: iced::Background::Color(if is_dark {
+            colors::DARK_SURFACE
+        } else {
+            Color::from_rgb(0.85, 0.85, 0.85)
+        }),
         bar: iced::Background::Color(colors::PRIMARY),
         border: Border {
-            color: if is_dark { colors::DARK_BORDER } else { colors::LIGHT_BORDER },
+            color: if is_dark {
+                colors::DARK_BORDER
+            } else {
+                colors::LIGHT_BORDER
+            },
             width: 1.0,
             radius: 4.0.into(),
         },

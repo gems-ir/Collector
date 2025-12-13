@@ -1,10 +1,15 @@
+use crate::com::Resource;
 use crate::com::collection::CollectionProgress;
 use crate::com::config::AppData;
-use crate::com::Resource;
-use crate::com::{collection::run_collection, config::Config, filter_resources, get_categories, load_resources};
+use crate::com::{
+    collection::run_collection, config::Config, filter_resources, get_categories, load_resources,
+};
 use crate::gui::message::Message;
 use crate::style::theme::app_background_style;
-use crate::views::{view_input_section, view_output_section, view_resource_modal, view_resources_section, view_footer};
+use crate::views::{
+    view_footer, view_input_section, view_output_section, view_resource_modal,
+    view_resources_section,
+};
 use dark_light::Mode;
 use iced::widget::{column, container, row};
 use iced::{Element, Length, Subscription, Task, Theme};
@@ -302,7 +307,7 @@ impl CollectorApp {
                             zip_pass,
                             tx,
                         )
-                            .await
+                        .await
                     },
                     Message::CollectionCompleted,
                 )
@@ -326,7 +331,6 @@ impl CollectorApp {
             //     );
             //     Task::none()
             // }
-
             Message::CollectionCompleted(result) => {
                 // Clear shared progress
                 if let Ok(mut guard) = self.shared_progress.lock() {
@@ -344,7 +348,9 @@ impl CollectorApp {
             }
 
             Message::TickProgress => {
-                if let Ok(guard) = self.shared_progress.lock() && let Some(ref progress) = *guard {
+                if let Ok(guard) = self.shared_progress.lock()
+                    && let Some(ref progress) = *guard
+                {
                     self.progress_current = progress.current;
                     self.progress_total = progress.total;
                     self.progress_file = progress.current_file.clone();
@@ -376,11 +382,7 @@ impl CollectorApp {
             .spacing(15)
             .width(Length::Fill);
 
-        let content = column![
-            top_section,
-            view_resources_section(self),
-            view_footer(self),
-        ]
+        let content = column![top_section, view_resources_section(self), view_footer(self),]
             .spacing(10)
             .padding(20);
 
@@ -394,8 +396,7 @@ impl CollectorApp {
 
     pub fn subscription(&self) -> Subscription<Message> {
         if self.collection_state == CollectionState::Collecting {
-            iced::time::every(std::time::Duration::from_millis(100))
-                .map(|_| Message::TickProgress)
+            iced::time::every(std::time::Duration::from_millis(100)).map(|_| Message::TickProgress)
         } else {
             Subscription::none()
         }

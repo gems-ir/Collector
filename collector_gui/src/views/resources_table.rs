@@ -1,11 +1,11 @@
-use iced::widget::{button, checkbox, column, container, row, scrollable, text, Column};
+use iced::widget::{Column, button, checkbox, column, container, row, scrollable, text};
 use iced::{Alignment, Element, Length};
 
 use crate::com::Resource;
+use crate::gui::CollectorApp;
+use crate::gui::message::Message;
 use crate::style::icons::{self, icon_small};
 use crate::style::theme::{icon_button_style, table_header_style, table_row_style};
-use crate::gui::message::Message;
-use crate::gui::CollectorApp;
 
 // View of the resources table
 pub fn view_resources_table(app: &CollectorApp) -> Element<'_, Message> {
@@ -41,15 +41,19 @@ pub fn view_resources_table(app: &CollectorApp) -> Element<'_, Message> {
         } else {
             "No resources match your search"
         };
-        vec![container(text(empty_msg).align_x(Alignment::Center).size(14))
-            .width(Length::Fill)
-            .padding(30)
-            .into()]
+        vec![
+            container(text(empty_msg).align_x(Alignment::Center).size(14))
+                .width(Length::Fill)
+                .padding(30)
+                .into(),
+        ]
     } else {
         app.filtered_resources
             .iter()
             .enumerate()
-            .map(|(idx, resource)| create_resource_row(resource, &app.checked_resources, app.is_dark, idx))
+            .map(|(idx, resource)| {
+                create_resource_row(resource, &app.checked_resources, app.is_dark, idx)
+            })
             .collect()
     };
 
@@ -60,7 +64,7 @@ pub fn view_resources_table(app: &CollectorApp) -> Element<'_, Message> {
         .spacing(0)
         .width(Length::Fill)
         .height(Length::Fill)
-        .padding([2,6])
+        .padding([2, 6])
         .into()
 }
 

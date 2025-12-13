@@ -2,7 +2,6 @@ use crate::utils::*;
 use serde::Deserialize;
 use std::fs;
 
-
 #[derive(PartialEq, Deserialize, Clone, Debug, Default)]
 pub(crate) struct Config {
     pub(crate) source_path: Option<String>,
@@ -42,10 +41,8 @@ impl Config {
             self.destination_path = Some(DESTINATION_PATH.to_string());
         }
 
-        let default_resources: Vec<String> = RESOURCES_EXAMPLE
-            .into_iter()
-            .map(String::from)
-            .collect();
+        let default_resources: Vec<String> =
+            RESOURCES_EXAMPLE.into_iter().map(String::from).collect();
         if self.resource_list.is_none() {
             self.resource_list = Some(default_resources);
         }

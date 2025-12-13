@@ -1,4 +1,4 @@
 mod app;
 pub mod message;
 
-pub use app::{CollectorApp, CollectionState};
+pub use app::{CollectionState, CollectorApp};

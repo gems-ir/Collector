@@ -1,7 +1,7 @@
 //! Utility functions and types.
 
-use std::path::{Path, PathBuf};
 use crate::error::{CollectorError, Result};
+use std::path::{Path, PathBuf};
 
 pub const FILE_BUFFER_SIZE: usize = 32 * 1024;
 pub const NTFS_READ_BUFFER_SIZE: usize = 32 * 1024;
@@ -15,7 +15,9 @@ pub struct FormatSource {
 
 impl FormatSource {
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
-        Self { path: path.as_ref().to_path_buf() }
+        Self {
+            path: path.as_ref().to_path_buf(),
+        }
     }
 
     pub fn as_path(&self) -> &Path {
@@ -40,7 +42,9 @@ impl FormatSource {
     }
 
     pub fn join<P: AsRef<Path>>(&self, value: P) -> Self {
-        Self { path: self.path.join(value) }
+        Self {
+            path: self.path.join(value),
+        }
     }
 
     pub fn exists(&self) -> bool {
@@ -76,13 +80,17 @@ impl From<PathBuf> for FormatSource {
 
 impl From<&str> for FormatSource {
     fn from(s: &str) -> Self {
-        Self { path: PathBuf::from(s) }
+        Self {
+            path: PathBuf::from(s),
+        }
     }
 }
 
 impl From<String> for FormatSource {
     fn from(s: String) -> Self {
-        Self { path: PathBuf::from(s) }
+        Self {
+            path: PathBuf::from(s),
+        }
     }
 }
 
@@ -99,7 +107,7 @@ pub fn is_admin() -> bool {
     use winapi::shared::minwindef::{DWORD, LPVOID};
     use winapi::um::processthreadsapi::{GetCurrentProcess, OpenProcessToken};
     use winapi::um::securitybaseapi::GetTokenInformation;
-    use winapi::um::winnt::{TokenElevation, HANDLE, TOKEN_ELEVATION, TOKEN_QUERY};
+    use winapi::um::winnt::{HANDLE, TOKEN_ELEVATION, TOKEN_QUERY, TokenElevation};
 
     unsafe {
         let mut token: HANDLE = null_mut();
@@ -113,7 +121,8 @@ pub fn is_admin() -> bool {
                 &mut elevation as *mut _ as LPVOID,
                 mem::size_of::<TOKEN_ELEVATION>() as u32,
                 &mut size,
-            ) != 0 {
+            ) != 0
+            {
                 return elevation.TokenIsElevated != 0;
             }
         }
@@ -154,7 +163,6 @@ pub fn truncate_text(text: &str, max_len: usize) -> String {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,7 +184,7 @@ mod tests {
     fn test_format_source_join() {
         let source = FormatSource::new("/home");
         let new_source = source.join("user");
-        
+
         // Original unchanged
         assert_eq!(source.to_path_buf(), PathBuf::from("/home"));
         // New one has joined path
