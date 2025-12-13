@@ -1,7 +1,5 @@
 use std::collections::HashSet;
-
-use collector_core::resource::YamlParser;
-
+use collector_core::prelude::*;
 use crate::com::config::Config;
 
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -13,17 +11,24 @@ pub struct Resource {
     pub is_checked: bool,
 }
 
-/// Loads resources in async mode 
 pub async fn load_resources(config: &Config) -> Vec<Resource> {
     let Some(ref resource_path) = config.resource_path else {
         return Vec::new();
     };
 
-    let mut parser_obj = YamlParser::new(resource_path.clone());
-    let doc_artifacts = parser_obj.get_doc_struct().await;
+    let parser = match ResourcesParser::new(resource_path) {
+        Ok(p) => p,
+        Err(_) => return Vec::new(),
+    };
 
-    doc_artifacts
+    let artifacts = match parser.get_doc_struct().await {
+        Ok(a) => a,
+        Err(_) => return Vec::new(),
+    };
+
+    artifacts
         .iter()
+        .filter(|a| a.artifact.path.is_some())
         .map(|artifact| {
             let name = artifact.metadata.name.clone();
             let is_checked = config
@@ -47,7 +52,6 @@ pub async fn load_resources(config: &Config) -> Vec<Resource> {
         .collect()
 }
 
-/// Extract unique categories of resources
 pub fn get_categories(resources: &[Resource]) -> Vec<String> {
     let cats: HashSet<String> = resources.iter().map(|r| r.category.clone()).collect();
     let mut sorted_cats: Vec<String> = cats.into_iter().collect();
@@ -55,7 +59,6 @@ pub fn get_categories(resources: &[Resource]) -> Vec<String> {
     sorted_cats
 }
 
-/// Filter resource by search, category and selection
 pub fn filter_resources(
     resources: &[Resource],
     search_query: &str,
@@ -63,28 +66,15 @@ pub fn filter_resources(
     show_selected_only: bool,
     checked_resources: &[String],
 ) -> Vec<Resource> {
+    let query = search_query.to_lowercase();
+    
     resources
         .iter()
         .filter(|resource| {
-            let query = search_query.to_lowercase();
-            let name_matches = if query.is_empty() {
-                true
-            } else {
-                resource.name.to_lowercase().contains(&query)
-            };
-
-            let category_matches = if selected_category == "All" {
-                true
-            } else {
-                resource.category == selected_category
-            };
-
-            let selected_matches = if show_selected_only {
-                checked_resources.contains(&resource.name)
-            } else {
-                true
-            };
-
+            let name_matches = query.is_empty() || resource.name.to_lowercase().contains(&query);
+            let category_matches = selected_category == "All" || resource.category == selected_category;
+            let selected_matches = !show_selected_only || checked_resources.contains(&resource.name);
+            
             name_matches && category_matches && selected_matches
         })
         .cloned()

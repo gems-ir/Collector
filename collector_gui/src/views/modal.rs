@@ -1,10 +1,10 @@
-use iced::widget::{button, column, container, horizontal_rule, horizontal_space, row, scrollable, text};
+use iced::widget::{button, column, container, row, rule, scrollable, text, Space};
 use iced::{Alignment, Element, Length};
 
 use crate::com::Resource;
-use crate::style::theme::{badge_style, code_block_style, icon_button_style, modal_content_style, modal_overlay_style};
-use crate::style::icons::{self, icon_button};
 use crate::gui::message::Message;
+use crate::style::icons::{self, icon_button};
+use crate::style::theme::{badge_style, code_block_style, icon_button_style, modal_content_style, modal_overlay_style};
 
 
 /// View of the resource detail modal (overlay)
@@ -13,16 +13,16 @@ pub fn view_resource_modal(resource: &Resource, is_dark: bool) -> Element<'_, Me
     let header = container(
         row![
             text(&resource.name).size(18),
-            horizontal_space(),
+            Space::new().width(Length::Fill),
             button(icon_button(icons::X))
                 .on_press(Message::CloseModal)
                 .padding(8)
                 .style(icon_button_style(is_dark)),
         ]
-        .align_y(Alignment::Center),
+            .align_y(Alignment::Center),
     )
-    .padding([15, 20])
-    .width(Length::Fill);
+        .padding([15, 20])
+        .width(Length::Fill);
 
     // category badge
     let category_badge = container(text(&resource.category).size(11))
@@ -34,14 +34,14 @@ pub fn view_resource_modal(resource: &Resource, is_dark: bool) -> Element<'_, Me
         row![
             text("Category:").size(12),
             category_badge,
-            horizontal_space().width(20),
+            Space::new().width(Length::FillPortion(20)),
             text("Description:").size(12),
             text(&resource.description).size(12),
         ]
-        .spacing(8)
-        .align_y(Alignment::Center),
+            .spacing(8)
+            .align_y(Alignment::Center),
     )
-    .padding([10, 20]);
+        .padding([10, 20]);
 
     // Scrollable content
     let content_scroll = scrollable(
@@ -50,24 +50,24 @@ pub fn view_resource_modal(resource: &Resource, is_dark: bool) -> Element<'_, Me
                 .size(11)
                 .font(iced::Font::MONOSPACE),
         )
-        .padding(15)
-        .width(Length::Fill)
-        .style(move |_| code_block_style(is_dark)),
+            .padding(15)
+            .width(Length::Fill)
+            .style(move |_| code_block_style(is_dark)),
     )
-    .height(Length::Fixed(350.0));
+        .height(Length::Fixed(350.0));
 
     let content_container = container(content_scroll).padding(20);
 
     // Modal assembly
     let modal_content = column![
         header,
-        horizontal_rule(1),
+        rule::horizontal(1),
         metadata,
-        horizontal_rule(1),
+        rule::horizontal(1),
         content_container,
     ]
-    .spacing(0)
-    .width(Length::Fixed(750.0));
+        .spacing(0)
+        .width(Length::Fixed(750.0));
 
     let modal_box = container(modal_content).style(move |_| modal_content_style(is_dark));
 

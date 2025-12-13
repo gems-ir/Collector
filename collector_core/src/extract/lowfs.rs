@@ -1,113 +1,165 @@
-use tokio::io::AsyncWriteExt;
-use tokio::fs::File;
-use anyhow::{Result,anyhow};
+//! Low-level NTFS extraction.
 
-use std::io::{Read,Seek,BufReader};
+use std::io::{BufReader, Read, Seek};
 
-use ntfs::{Ntfs,NtfsFile,NtfsReadSeek};
 use ntfs::indexes::NtfsFileNameIndex;
+use ntfs::{Ntfs, NtfsFile, NtfsReadSeek};
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 
+use crate::error::{CollectorError, Result};
 use crate::extract::sector_reader::SectorReader;
+use crate::utils::NTFS_READ_BUFFER_SIZE;
 
-struct InfoFS<'n, T>
-where
-    T: Read + Seek,{
-	current_directory: Vec<NtfsFile<'n>>,
-	fs: T,
+struct NtfsContext<'n, T: Read + Seek> {
+    current_directory: Vec<NtfsFile<'n>>,
+    fs: T,
     ntfs: &'n Ntfs,
 }
 
-pub async fn extract_ntfs(device_name: String, artifact_name: String, output_file: &mut File) -> Result<String,>{
-	// Create ntfs struct
-	let f = std::fs::File::open(device_name.clone())?;
-	let sr = SectorReader::new(f,4096)?;
-	let mut fs = BufReader::new(sr);	
-	let mut ntfs = Ntfs::new(&mut fs)?;
-	ntfs.read_upcase_table(&mut fs)?;
-	let current_directory = vec![ntfs.root_directory(&mut fs)?];
-	let mut infofs = InfoFS{
-		current_directory,
-		fs,
-		ntfs: &ntfs
-	};
-	
-	// Find file or path
-	let mut split_artifact: Vec<&str> = artifact_name.split('\\').collect();
-	let binding = split_artifact.clone();
- 	let get_filename = binding.last();
-	let _ = &split_artifact.pop();
-	if split_artifact.len() > 1 {
-		let _ = move_to(&mut infofs, split_artifact);
-		let file = from_to(&mut infofs, get_filename.unwrap().to_string());
-		match file{
-			Ok(_) => {
-				let _ = write_out(&mut infofs,output_file,file?).await;
-			}
-			Err(e) => return Err(anyhow!(e)), 
-		}
-	}else{
-		let file = from_to(&mut infofs, artifact_name.clone());
-		match file{
-			Ok(_) => {
-				let _ = write_out(&mut infofs,output_file,file?).await;
-			}
-			Err(e) => return Err(anyhow!(e)), 
-		}
-	}
-	// let _ = &device_name.push_str("\\");
-	let full_artifact_path = device_name + "\\" + &artifact_name;
-	Ok(format!("A file has been recover: {}",full_artifact_path))
+pub async fn extract_ntfs(
+    device_name: String,
+    artifact_path: String,
+    output_file: &mut File,
+) -> Result<u64> {
+    let file = std::fs::File::open(&device_name).map_err(|e| {
+        CollectorError::NtfsError(format!("Failed to open volume {}: {}", device_name, e))
+    })?;
+
+    let sector_reader = SectorReader::new(file, 4096).map_err(|e| {
+        CollectorError::SectorReaderError(e.to_string())
+    })?;
+
+    let mut fs = BufReader::new(sector_reader);
+    
+    let mut ntfs = Ntfs::new(&mut fs).map_err(|e| {
+        CollectorError::NtfsError(format!("Failed to init NTFS: {}", e))
+    })?;
+
+    ntfs.read_upcase_table(&mut fs).map_err(|e| {
+        CollectorError::NtfsError(format!("Failed to read upcase table: {}", e))
+    })?;
+
+    let root_dir = ntfs.root_directory(&mut fs).map_err(|e| {
+        CollectorError::NtfsError(format!("Failed to get root: {}", e))
+    })?;
+
+    let mut context = NtfsContext {
+        current_directory: vec![root_dir],
+        fs,
+        ntfs: &ntfs,
+    };
+
+    let path_components: Vec<&str> = artifact_path
+        .split('\\')
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    if path_components.is_empty() {
+        return Err(CollectorError::NtfsExtraction {
+            path: artifact_path.into(),
+            reason: "Empty path".to_string(),
+        });
+    }
+
+    let (parent_path, filename) = path_components.split_at(path_components.len() - 1);
+    let filename = filename[0];
+
+    if !parent_path.is_empty() {
+        navigate_to_directory(&mut context, parent_path)?;
+    }
+
+    let file = find_file(&mut context, filename)?;
+    let bytes = write_file_contents(&mut context, &file, output_file).await?;
+
+    Ok(bytes)
 }
 
-fn move_to<T>(infofs: &mut InfoFS<T>,artifact_path: Vec<&str>) -> Result<()>
-where
-    T: Read + Seek,
-{
-	for path in artifact_path{
-		let index = infofs.current_directory.last().unwrap().directory_index(&mut infofs.fs)?;
-		let mut finder = index.finder();
-		let entry = NtfsFileNameIndex::find(&mut finder, infofs.ntfs, &mut infofs.fs, path);
-		if entry.is_none(){
-			return Ok(())
-		}
-		let file = entry.unwrap()?.to_file(infofs.ntfs, &mut infofs.fs)?;
-		infofs.current_directory.push(file);
-	}
-	Ok(())
+fn navigate_to_directory<T: Read + Seek>(context: &mut NtfsContext<T>, path: &[&str]) -> Result<()> {
+    for component in path {
+        let current_dir = context.current_directory.last().ok_or_else(|| {
+            CollectorError::NtfsError("No current directory".to_string())
+        })?;
 
+        let index = current_dir.directory_index(&mut context.fs).map_err(|e| {
+            CollectorError::NtfsError(format!("Directory index error: {}", e))
+        })?;
+
+        let mut finder = index.finder();
+        let entry = NtfsFileNameIndex::find(&mut finder, context.ntfs, &mut context.fs, component);
+
+        let entry = entry.ok_or_else(|| CollectorError::NtfsExtraction {
+            path: component.to_string().into(),
+            reason: "Directory not found".to_string(),
+        })?.map_err(|e| CollectorError::NtfsError(format!("Entry error: {}", e)))?;
+
+        let file = entry.to_file(context.ntfs, &mut context.fs).map_err(|e| {
+            CollectorError::NtfsError(format!("File conversion error: {}", e))
+        })?;
+
+        context.current_directory.push(file);
+    }
+
+    Ok(())
 }
 
-fn from_to<'n,T>(infofs: &mut InfoFS<'n, T>,artifact_filename: String) -> Result<NtfsFile<'n>,>
-where
-	T: Read + Seek,
-{
-	let index = infofs.current_directory.last().unwrap().directory_index(&mut infofs.fs)?;
-	let mut finder = index.finder();
-	let entry = NtfsFileNameIndex::find(&mut finder, infofs.ntfs, &mut infofs.fs, &artifact_filename);
-	let test_entry = match entry {
-		Some(entry) => entry,
-		None => return Err(anyhow!("Error on file : {}",artifact_filename)),
-	};
-	let file = test_entry.unwrap().to_file(infofs.ntfs, &mut infofs.fs)?;
-	Ok(file)
+fn find_file<'n, T: Read + Seek>(context: &mut NtfsContext<'n, T>, filename: &str) -> Result<NtfsFile<'n>> {
+    let current_dir = context.current_directory.last().ok_or_else(|| {
+        CollectorError::NtfsError("No current directory".to_string())
+    })?;
+
+    let index = current_dir.directory_index(&mut context.fs).map_err(|e| {
+        CollectorError::NtfsError(format!("Directory index error: {}", e))
+    })?;
+
+    let mut finder = index.finder();
+    let entry = NtfsFileNameIndex::find(&mut finder, context.ntfs, &mut context.fs, filename);
+
+    let entry = entry.ok_or_else(|| CollectorError::NtfsExtraction {
+        path: filename.to_string().into(),
+        reason: "File not found".to_string(),
+    })?.map_err(|e| CollectorError::NtfsError(format!("Entry error: {}", e)))?;
+
+    entry.to_file(context.ntfs, &mut context.fs).map_err(|e| {
+        CollectorError::NtfsError(format!("File conversion error: {}", e))
+    })
 }
 
-async fn write_out<T>(infofs: &mut InfoFS<'_, T>,output_file: &mut File, file: NtfsFile<'_>) -> Result<()>
-where
-	T: Read + Seek,
-{
-	let data_item = file.data(&mut infofs.fs, "");
-	let data_item = data_item.unwrap()?;
-	let data_attribute = data_item.to_attribute()?;
-	let mut data_value = data_attribute.value(&mut infofs.fs)?;
-	let mut buf = [0u8; 32768];
-	loop {
-		let bytes_read = data_value.read(&mut infofs.fs, &mut buf)?;
-		if bytes_read == 0 {
-			break;
-		}
+async fn write_file_contents<T: Read + Seek>(
+    context: &mut NtfsContext<'_, T>,
+    file: &NtfsFile<'_>,
+    output: &mut File,
+) -> Result<u64> {
+    let data_item = file.data(&mut context.fs, "").ok_or_else(|| {
+        CollectorError::NtfsError("No data attribute".to_string())
+    })?.map_err(|e| CollectorError::NtfsError(format!("Data error: {}", e)))?;
 
-		let _ = output_file.write_all(&buf[..bytes_read]).await?;
-	}
-	Ok(())
+    let data_attribute = data_item.to_attribute().map_err(|e| {
+        CollectorError::NtfsError(format!("Attribute error: {}", e))
+    })?;
+
+    let mut data_value = data_attribute.value(&mut context.fs).map_err(|e| {
+        CollectorError::NtfsError(format!("Value error: {}", e))
+    })?;
+
+    let mut total_bytes = 0u64;
+    let mut buffer = [0u8; NTFS_READ_BUFFER_SIZE];
+
+    loop {
+        let bytes_read = data_value.read(&mut context.fs, &mut buffer).map_err(|e| {
+            CollectorError::NtfsError(format!("Read error: {}", e))
+        })?;
+
+        if bytes_read == 0 {
+            break;
+        }
+
+        output.write_all(&buffer[..bytes_read]).await.map_err(|e| {
+            CollectorError::FileWrite { path: "output".into(), source: e }
+        })?;
+
+        total_bytes += bytes_read as u64;
+    }
+
+    Ok(total_bytes)
 }

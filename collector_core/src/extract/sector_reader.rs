@@ -128,3 +128,43 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn test_sector_reader_new_valid() {
+        let data = vec![0u8; 4096];
+        let cursor = Cursor::new(data);
+        let reader = SectorReader::new(cursor, 512);
+        assert!(reader.is_ok());
+    }
+
+    #[test]
+    fn test_sector_reader_new_invalid_sector_size() {
+        let data = vec![0u8; 4096];
+        let cursor = Cursor::new(data);
+        let reader = SectorReader::new(cursor, 100); // Not a power of 2
+        assert!(reader.is_err());
+    }
+
+    #[test]
+    fn test_sector_reader_seek() {
+        let data = vec![0u8; 4096];
+        let cursor = Cursor::new(data);
+        let mut reader = SectorReader::new(cursor, 512).unwrap();
+
+        assert!(reader.seek(SeekFrom::Start(100)).is_ok());
+        assert_eq!(reader.stream_position, 100);
+
+        assert!(reader.seek(SeekFrom::Current(50)).is_ok());
+        assert_eq!(reader.stream_position, 150);
+
+        assert!(reader.seek(SeekFrom::Current(-50)).is_ok());
+        assert_eq!(reader.stream_position, 100);
+
+        assert!(reader.seek(SeekFrom::End(0)).is_err());
+    }
+}

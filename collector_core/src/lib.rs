@@ -1,20 +1,27 @@
-mod utils;
-mod csv;
+//! Fast and secure artifact collector for digital forensics.
+
+pub mod error;
 pub mod resource;
-mod writer;
+pub mod platform;
+pub mod writer;
+pub mod csv;
+pub mod utils;
+
 mod extract;
 
+#[cfg(target_os = "windows")]
+pub mod mount;
 
-#[cfg(target_os = "linux")]
-mod linux;
-#[cfg(target_os = "linux")]
-pub use linux::Collect;
+pub mod prelude {
+    pub use crate::error::{CollectorError, Result};
+    pub use crate::platform::{ArtifactCollector, CollectionStats, VssCollector};
+    pub use crate::resource::{ResourcesParser, YamlArtifact, YamlParser};
+    pub use crate::writer::Writer;
+    pub use crate::csv::{CsvLogFile, CsvLogItem};
+    pub use crate::utils::{is_admin, require_admin, FormatSource};
+}
 
-#[cfg(target_family = "windows")]
-mod windows;
-#[cfg(target_family = "windows")]
-pub mod windows_vss;
-#[cfg(target_family = "windows")]
-pub use windows::Collect;
-#[cfg(target_family = "windows")]
-mod mount;
+// Re-exports for convenience
+pub use error::{CollectorError, Result};
+pub use platform::{ArtifactCollector, CollectionStats, VssCollector};
+pub use resource::{ResourcesParser, YamlParser};

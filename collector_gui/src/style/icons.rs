@@ -31,9 +31,9 @@ pub fn icon<'a, Message: 'a>(icon_bytes: &'static [u8], size: u16) -> Element<'a
 }
 
 pub fn icon_button<'a, Message: 'a>(icon_bytes: &'static [u8]) -> Element<'a, Message> {
-    icon(icon_bytes, 16)
+    icon(icon_bytes, 20)
 }
 
 pub fn icon_small<'a, Message: 'a>(icon_bytes: &'static [u8]) -> Element<'a, Message> {
-    icon(icon_bytes, 14)
+    icon(icon_bytes, 16)
 }

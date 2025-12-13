@@ -2,7 +2,7 @@ use iced::widget::{button, checkbox, column, container, row, scrollable, text, C
 use iced::{Alignment, Element, Length};
 
 use crate::com::Resource;
-use crate::style::icons::{self, icon_button};
+use crate::style::icons::{self, icon_small};
 use crate::style::theme::{icon_button_style, table_header_style, table_row_style};
 use crate::gui::message::Message;
 use crate::gui::CollectorApp;
@@ -10,7 +10,7 @@ use crate::gui::CollectorApp;
 // View of the resources table
 pub fn view_resources_table(app: &CollectorApp) -> Element<'_, Message> {
     let header = row![
-        text("").width(Length::Fixed(40.0)),
+        text("").width(Length::Fixed(20.0)),
         text("Name")
             .width(Length::FillPortion(2))
             .align_x(Alignment::Center)
@@ -29,7 +29,7 @@ pub fn view_resources_table(app: &CollectorApp) -> Element<'_, Message> {
             .size(13),
     ]
     .spacing(5)
-    .padding([8, 10]);
+    .padding([6, 6]);
 
     let header_container = container(header)
         .width(Length::Fill)
@@ -60,6 +60,7 @@ pub fn view_resources_table(app: &CollectorApp) -> Element<'_, Message> {
         .spacing(0)
         .width(Length::Fill)
         .height(Length::Fill)
+        .padding([2,6])
         .into()
 }
 
@@ -76,7 +77,7 @@ fn create_resource_row(
     let is_alternate = index % 2 == 1;
 
     let row_content = row![
-        checkbox("", is_checked)
+        checkbox(is_checked)
             .on_toggle(move |_| Message::ToggleResource(name.clone()))
             .width(Length::Fixed(40.0)),
         text(resource.name.clone())
@@ -90,14 +91,14 @@ fn create_resource_row(
             .width(Length::FillPortion(3))
             .align_x(Alignment::Center)
             .size(12),
-        button(icon_button(icons::EYE))
+        button(icon_small(icons::EYE))
             .on_press(Message::ViewResource(resource_clone))
             .width(Length::Fixed(50.0))
-            .padding(6)
+            .padding(2)
             .style(icon_button_style(is_dark)),
     ]
     .spacing(5)
-    .padding([6, 10])
+    .padding([6, 6])
     .align_y(Alignment::Center);
 
     container(row_content)

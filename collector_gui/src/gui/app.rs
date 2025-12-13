@@ -1,19 +1,23 @@
+use crate::com::collection::CollectionProgress;
 use crate::com::config::AppData;
-use std::path::PathBuf;
 use crate::com::Resource;
-use dark_light::Mode;
-use iced::widget::{column, container, row, vertical_space};
-use iced::{Element, Length, Task, Theme};
-
+use crate::com::{collection::run_collection, config::Config, filter_resources, get_categories, load_resources};
 use crate::gui::message::Message;
 use crate::style::theme::app_background_style;
-use crate::views::{view_footer, view_input_section, view_output_section, view_resource_modal, view_resources_section};
-use crate::com::{filter_resources, get_categories, load_resources, collection::run_collection, config::Config};
+use crate::views::{view_input_section, view_output_section, view_resource_modal, view_resources_section, view_footer};
+use dark_light::Mode;
+use iced::widget::{column, container, row};
+use iced::{Element, Length, Subscription, Task, Theme};
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CollectionState {
     Ready,
     Collecting,
+    Completed,
+    Error,
 }
 
 pub struct CollectorApp {
@@ -51,6 +55,14 @@ pub struct CollectorApp {
     // Collection state
     pub collection_state: CollectionState,
     pub collection_message: String,
+
+    // Progress
+    pub progress_current: u64,
+    pub progress_total: u64,
+    pub progress_file: String,
+
+    // Shared progress for subscription
+    pub shared_progress: Arc<Mutex<Option<CollectionProgress>>>,
 }
 
 impl CollectorApp {
@@ -235,76 +247,142 @@ impl CollectorApp {
             }
 
             Message::StartCollection => {
-                if self.collection_state != CollectionState::Collecting {
-                    self.collection_state = CollectionState::Collecting;
-                    self.collection_message = "Collection in progress, please wait...".to_string();
+                if self.collection_state == CollectionState::Collecting {
+                    return Task::none();
+                }
 
-                    let source = self
-                        .source_path
-                        .clone()
-                        .map(|p| p.to_string_lossy().to_string())
-                        .unwrap_or_default();
-                    let destination = self
-                        .destination_path
-                        .clone()
-                        .map(|p| p.to_string_lossy().to_string())
-                        .unwrap_or_default();
-                    let resources = self.checked_resources.clone();
-                    let resource_path = self.config.resource_path.clone().unwrap_or_default();
-                    let vss_enabled = self.vss_enabled;
-                    let zip_enabled = self.zip_enabled;
-                    let zip_pass = if self.zip_password_enabled {
-                        Some(self.zip_password.clone())
-                    } else {
-                        None
-                    };
+                self.collection_state = CollectionState::Collecting;
+                self.collection_message = "Starting collection...".to_string();
+                self.progress_current = 0;
+                self.progress_total = 0;
+                self.progress_file = String::new();
 
-                    return Task::perform(
-                        async move {
-                            run_collection(
-                                source,
-                                destination,
-                                resources,
-                                resource_path,
-                                vss_enabled,
-                                zip_enabled,
-                                zip_pass,
-                            )
+                let source = self
+                    .source_path
+                    .clone()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                let destination = self
+                    .destination_path
+                    .clone()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                let resources = self.checked_resources.clone();
+                let resource_path = self.config.resource_path.clone().unwrap_or_default();
+                let vss_enabled = self.vss_enabled;
+                let zip_enabled = self.zip_enabled;
+                let zip_pass = if self.zip_password_enabled {
+                    Some(self.zip_password.clone())
+                } else {
+                    None
+                };
+
+                // Create channel for progress
+                let (tx, mut rx) = mpsc::unbounded_channel();
+                let shared_progress = self.shared_progress.clone();
+
+                // Spawn task to read progress updates
+                tokio::spawn(async move {
+                    while let Some(progress) = rx.recv().await {
+                        if let Ok(mut guard) = shared_progress.lock() {
+                            *guard = Some(progress);
+                        }
+                    }
+                });
+
+                Task::perform(
+                    async move {
+                        run_collection(
+                            source,
+                            destination,
+                            resources,
+                            resource_path,
+                            vss_enabled,
+                            zip_enabled,
+                            zip_pass,
+                            tx,
+                        )
                             .await
-                        },
-                        |_| Message::CollectionCompleted,
-                    );
+                    },
+                    Message::CollectionCompleted,
+                )
+            }
+
+            // TO REMOVE
+            // Message::CollectionProgress { current, total, file } => {
+            //     self.progress_current = current;
+            //     self.progress_total = total;
+            //     self.progress_file = file;
+
+            //     let percentage = if total > 0 {
+            //         (current * 100) / total
+            //     } else {
+            //         0
+            //     };
+
+            //     self.collection_message = format!(
+            //         "Collecting... {}% ({}/{})",
+            //         percentage, current, total
+            //     );
+            //     Task::none()
+            // }
+
+            Message::CollectionCompleted(result) => {
+                // Clear shared progress
+                if let Ok(mut guard) = self.shared_progress.lock() {
+                    *guard = None;
+                }
+
+                if result.success {
+                    self.collection_state = CollectionState::Completed;
+                    self.collection_message = result.message;
+                } else {
+                    self.collection_state = CollectionState::Error;
+                    self.collection_message = result.message;
                 }
                 Task::none()
             }
 
-            Message::CollectionCompleted => {
-                self.collection_state = CollectionState::Ready;
-                self.collection_message = "Collection completed successfully!".to_string();
+            Message::TickProgress => {
+                if let Ok(guard) = self.shared_progress.lock() && let Some(ref progress) = *guard {
+                    self.progress_current = progress.current;
+                    self.progress_total = progress.total;
+                    self.progress_file = progress.current_file.clone();
+
+                    let percentage = if progress.total > 0 {
+                        (progress.current * 100) / progress.total
+                    } else {
+                        0
+                    };
+
+                    self.collection_message = format!(
+                        "Collecting... {}% ({}/{})",
+                        percentage, progress.current, progress.total
+                    );
+                    // }
+                }
                 Task::none()
             }
         }
     }
 
     pub fn view(&self) -> Element<'_, Message> {
-        // If a modal is open, display only the modal
         if let Some(ref resource) = self.viewing_resource {
             return view_resource_modal(resource, self.is_dark);
         }
 
         let top_section = row![view_input_section(self), view_output_section(self)]
+            .height(Length::Shrink)
             .spacing(15)
             .width(Length::Fill);
 
         let content = column![
             top_section,
-            vertical_space().height(10),
             view_resources_section(self),
-            vertical_space().height(10),
             view_footer(self),
         ]
-        .spacing(0)
-        .padding(20);
+            .spacing(10)
+            .padding(20);
 
         let is_dark = self.is_dark;
         container(content)
@@ -312,6 +390,15 @@ impl CollectorApp {
             .height(Length::Fill)
             .style(move |_| app_background_style(is_dark))
             .into()
+    }
+
+    pub fn subscription(&self) -> Subscription<Message> {
+        if self.collection_state == CollectionState::Collecting {
+            iced::time::every(std::time::Duration::from_millis(100))
+                .map(|_| Message::TickProgress)
+        } else {
+            Subscription::none()
+        }
     }
 
     pub fn theme(&self) -> Theme {
@@ -355,6 +442,10 @@ impl CollectorApp {
             viewing_resource: None,
             collection_state: CollectionState::Ready,
             collection_message: "Ready to collect".to_string(),
+            progress_current: 0,
+            progress_total: 0,
+            progress_file: String::new(),
+            shared_progress: Arc::new(Mutex::new(None)),
         }
     }
 }

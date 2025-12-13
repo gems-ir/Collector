@@ -1,7 +1,7 @@
+use crate::com::collection::CollectionResult;
 use crate::com::Resource;
 use std::path::PathBuf;
 
-/// All messages/events in the application
 #[derive(Debug, Clone)]
 pub enum Message {
     // Theme
@@ -32,5 +32,9 @@ pub enum Message {
 
     // Collection
     StartCollection,
-    CollectionCompleted,
+    // TO REMOVE
+    // #[allow(dead_code)]
+    // CollectionProgress { current: u64, total: u64, file: String },
+    CollectionCompleted(CollectionResult),
+    TickProgress,
 }

@@ -1,5 +1,10 @@
+//! Resource parsing module.
+
 mod file_struct;
 mod parser;
 
-pub use crate::resource::file_struct::*;
-pub use crate::resource::parser::YamlParser;
+pub use file_struct::{Artifact, Metadata, Target, YamlArtifact};
+pub use parser::ResourcesParser;
+
+// Alias for backward compatibility
+pub type YamlParser = ResourcesParser;

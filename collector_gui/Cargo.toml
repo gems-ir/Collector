@@ -10,7 +10,7 @@ keywords.workspace = true
 [dependencies]
 collector_core = { path = "../collector_core" }
 
-iced = { version = "0.13.1", features = ["tokio", "advanced", "svg", "image"] }
+iced = { version = "0.14", features = ["tokio", "advanced", "svg", "image"] }
 tokio = { version = "1.48", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.9.8"

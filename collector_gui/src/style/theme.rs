@@ -1,4 +1,4 @@
-use iced::widget::{button, container};
+use iced::widget::{button, container, progress_bar};
 use iced::{Border, Color};
 
 /// Colors of Collector theme 
@@ -21,6 +21,7 @@ pub mod colors {
 
     // Couleurs d'accent
     pub const PRIMARY: Color = Color::from_rgb(0.18, 0.49, 0.20);
+    // pub const PRIMARY_LIGHT: Color = Color::from_rgb(0.28, 0.59, 0.30);
 
     // Table
     pub const TABLE_HEADER: Color = Color::from_rgb(0.24, 0.32, 0.36);
@@ -177,5 +178,20 @@ pub fn code_block_style(is_dark: bool) -> container::Style {
             radius: 6.0.into(),
         },
         ..Default::default()
+    }
+}
+
+/// Style for progress bar
+pub fn progress_bar_style(is_dark: bool) -> impl Fn(&iced::Theme) -> progress_bar::Style {
+    move |_theme: &iced::Theme| progress_bar::Style {
+        background: iced::Background::Color(
+            if is_dark { colors::DARK_SURFACE } else { Color::from_rgb(0.85, 0.85, 0.85) }
+        ),
+        bar: iced::Background::Color(colors::PRIMARY),
+        border: Border {
+            color: if is_dark { colors::DARK_BORDER } else { colors::LIGHT_BORDER },
+            width: 1.0,
+            radius: 4.0.into(),
+        },
     }
 }
