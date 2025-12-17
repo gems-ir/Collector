@@ -87,7 +87,7 @@ jobs:
         shell: bash
         run: |
           BUILD_CMD="${{ matrix.cross && 'cross' || 'cargo' }}"
-          $BUILD_CMD build --bins --locked --release --target=${{ matrix.target }}
+          $BUILD_CMD build --bins --release --target=${{ matrix.target }}
 
       - name: Archive
         id: archive
