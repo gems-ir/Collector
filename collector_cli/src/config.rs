@@ -12,6 +12,7 @@ pub(crate) struct Config {
     verbose: Option<bool>,
     zip: Option<bool>,
     zip_pass: Option<String>,
+    #[cfg(target_os = "windows")]
     vss: Option<bool>,
     log: Option<bool>,
 }

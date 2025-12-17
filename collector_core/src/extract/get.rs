@@ -3,6 +3,7 @@ use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::error::{CollectorError, Result};
+#[cfg(target_os = "windows")]
 use crate::extract::lowfs;
 
 #[cfg(target_os = "windows")]
