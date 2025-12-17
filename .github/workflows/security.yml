@@ -1,12 +1,13 @@
 name: Security Audit
 
 on:
-  # schedule:
-    # - cron: '0 9 * * 1'
+  schedule:
+    - cron: '0 9 * * 1'
   workflow_dispatch:
   pull_request:
     paths:
       - '**/Cargo.toml'
+      - '**/Cargo.lock'
 
 jobs:
   audit:
@@ -23,8 +24,3 @@ jobs:
 
       - name: Run security audit
         run: cargo audit
-
-      - name: Check for outdated dependencies
-        run: |
-          cargo install cargo-outdated || true
-          cargo outdated --exit-code 0 || echo "Some dependencies are outdated"

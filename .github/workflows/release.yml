@@ -1,0 +1,138 @@
+name: Release
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+
+jobs:
+  # crate version extraction
+  metadata:
+    name: Extract information
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Extract version
+        id: extract_version
+        run: |
+          cargo metadata --no-deps --format-version 1 |
+          jq -r '"version=" + .packages[1].version' |
+          tee -a $GITHUB_OUTPUT
+
+  # multi‑platform build 
+  build:
+    needs: metadata
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - name: linux-x86-64-gnu
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            cross: false
+
+          - name: linux-x86-64-musl
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            cross: true
+
+          - name: linux-armv7-gnu
+            os: ubuntu-latest
+            target: armv7-unknown-linux-gnueabihf
+            cross: true
+
+          - name: linux-arm64-gnu
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            cross: true
+
+          # - name: mac-x86-64
+          #   os: macos-latest
+          #   target: x86_64-apple-darwin
+          #   cross: false
+          
+          # - name: mac-arm64
+          #   os: macos-latest
+          #   target: aarch64-apple-darwin
+          #   cross: false
+          
+          - name: windows-x86-64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            cross: false
+
+    runs-on: ${{ matrix.include.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+        with:
+          toolchain: ${{ matrix.include.target }}
+
+      - name: Install cross (only when needed)
+        if: ${{ matrix.include.cross }}
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+
+      - name: Build
+        shell: bash
+        run: |
+          BUILD_CMD="${{ matrix.include.cross && 'cross' || 'cargo' }}"
+          $BUILD_CMD build --bins --locked --release --target=${{ matrix.include.target }}
+
+      - name: Archive
+        id: archive
+        shell: bash
+        run: |
+          ARCHIVE_SUFFIX=".tar.gz"
+          [[ ${{ matrix.include.target }} == *-pc-windows-* ]] && ARCHIVE_SUFFIX=".zip"
+
+          ARCHIVE_BASENAME="Gems_Collector-v${{ needs.metadata.outputs.version }}-${{ matrix.include.name }}"
+          ARCHIVE_NAME="${ARCHIVE_BASENAME}${ARCHIVE_SUFFIX}"
+          echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> $GITHUB_OUTPUT
+
+          FOLDER_ARCHIVE="Collector"
+          mkdir "${FOLDER_ARCHIVE}"
+
+          EXE_SUFFIX=""
+          [[ ${{ matrix.include.target }} == *-pc-windows-* ]] && EXE_SUFFIX=".exe"
+
+          GUI_RELEASE_PATH="target/${{ matrix.include.target }}/release/collector_gui${EXE_SUFFIX}"
+          CLI_RELEASE_PATH="target/${{ matrix.include.target }}/release/collector_cli${EXE_SUFFIX}"
+
+          cp README.md LICENSE "${FOLDER_ARCHIVE}"
+          cp "${GUI_RELEASE_PATH}" "${FOLDER_ARCHIVE}"
+          cp "${CLI_RELEASE_PATH}" "${FOLDER_ARCHIVE}"
+          if [[ ${{ matrix.include.target }} == *-pc-windows-* ]]; then
+            cp collector_config_windows.toml "${FOLDER_ARCHIVE}"
+          else
+            cp collector_config_linux.toml "${FOLDER_ARCHIVE}"
+          fi
+
+          if [[ ${{ matrix.include.target }} == *-pc-windows-* ]]; then
+            7z -y a "${ARCHIVE_NAME}" "${FOLDER_ARCHIVE}"/* | tail -2
+          else
+            tar czf "${ARCHIVE_NAME}" "${FOLDER_ARCHIVE}"/*
+          fi
+
+  # publish release
+  publish_release:
+    needs: [metadata, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+            artifacts: ${{ needs.build.ARCHIVE_NAME }}
+            tag: v${{ needs.metadata.outputs.version }}
+            draft: true
+            allowUpdates: true
+            updateOnlyUnreleased: true

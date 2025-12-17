@@ -77,6 +77,10 @@ Options:
 - [x] VSS (Collect from volume shadow copy on Windows)
 - [x] Archive in ZIP format with a password
 - [x] Embeded config file and resources into binary to execute in click and launch mode.
-- [ ] Adaptive collect
 - [x] GUI
 - [ ] Send to a remote server
+- [ ] Adaptive collection
+- [ ] Memory collection
+- [ ] MacOS collection
+- [ ] Android collection
+- [ ] Create driver
