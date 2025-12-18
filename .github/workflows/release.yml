@@ -124,15 +124,29 @@ jobs:
             tar czf "${ARCHIVE_NAME}" "${FOLDER_ARCHIVE}"/*
           fi
 
+      - name: Upload archive as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}-archive
+          path: Gems_Collector-v${{ needs.metadata.outputs.version }}-${{ matrix.name }}.*
+          retention-days: 1
+
   # publish release
   publish_release:
     needs: [metadata, build]
     runs-on: ubuntu-latest
     steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: '*-archive'
+          merge-multiple: true
+
       - name: Publish GitHub Release
         uses: ncipollo/release-action@v1
         with:
-            artifacts: ${{ needs.build.ARCHIVE_NAME }}
+            artifacts: "artifacts/*"
             tag: v${{ needs.metadata.outputs.version }}
             draft: true
             allowUpdates: true
