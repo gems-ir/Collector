@@ -1,5 +1,3 @@
-//! CSV logging for artifact collection.
-
 use chrono::Utc;
 use csv_async::{AsyncReader, AsyncSerializer, AsyncWriterBuilder};
 use serde::Serialize;

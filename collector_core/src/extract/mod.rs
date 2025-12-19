@@ -1,5 +1,3 @@
-//! File extraction module.
-
 #[cfg(target_os = "windows")]
 mod lowfs;
 #[cfg(target_os = "windows")]

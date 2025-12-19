@@ -1,5 +1,3 @@
-//! Platform collectors.
-
 mod collector;
 mod vss_collector;
 

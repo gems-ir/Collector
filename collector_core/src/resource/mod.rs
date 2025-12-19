@@ -1,5 +1,3 @@
-//! Resource parsing module.
-
 mod file_struct;
 mod parser;
 

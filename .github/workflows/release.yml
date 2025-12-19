@@ -146,6 +146,7 @@ jobs:
       - name: Publish GitHub Release
         uses: ncipollo/release-action@v1
         with:
+            name: "Collector v${{ needs.metadata.outputs.version }}"
             artifacts: "artifacts/*"
             tag: v${{ needs.metadata.outputs.version }}
             draft: true

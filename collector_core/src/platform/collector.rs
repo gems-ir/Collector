@@ -1,5 +1,3 @@
-//! Main artifact collector implementation.
-
 use std::io::Read;
 use std::path::PathBuf;
 

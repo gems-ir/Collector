@@ -1,5 +1,3 @@
-//! Low-level NTFS extraction.
-
 use std::io::{BufReader, Read, Seek};
 
 use ntfs::indexes::NtfsFileNameIndex;

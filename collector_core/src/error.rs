@@ -1,5 +1,3 @@
-//! Error types for collector_core.
-
 use std::path::PathBuf;
 use thiserror::Error;
 

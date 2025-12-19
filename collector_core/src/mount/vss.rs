@@ -1,4 +1,4 @@
-//! VSS implementation for Windows.
+//! VSS implementation for Windows with improved safety.
 
 use std::ffi::OsString;
 use std::mem::zeroed;
@@ -22,6 +22,64 @@ use winapi::um::vss::{
 use winapi::um::winnt::HRESULT;
 
 use crate::error::{CollectorError, Result};
+
+/// RAII wrapper for IVssBackupComponents to ensure proper cleanup
+struct VssBackupComponentsGuard(*mut IVssBackupComponents);
+
+impl VssBackupComponentsGuard {
+    fn new(ptr: *mut IVssBackupComponents) -> Self {
+        Self(ptr)
+    }
+
+    // fn as_ptr(&self) -> *mut IVssBackupComponents {
+    //     self.0
+    // }
+
+    fn as_ref(&self) -> Result<&IVssBackupComponents> {
+        unsafe {
+            self.0.as_ref().ok_or_else(|| {
+                CollectorError::VssOperation("Null backup components pointer".into())
+            })
+        }
+    }
+}
+
+impl Drop for VssBackupComponentsGuard {
+    fn drop(&mut self) {
+        unsafe {
+            if !self.0.is_null() {
+                (*self.0).Release();
+            }
+        }
+    }
+}
+
+/// RAII wrapper for IVssEnumObject to ensure proper cleanup
+struct VssEnumObjectGuard(*mut IVssEnumObject);
+
+impl VssEnumObjectGuard {
+    fn new(ptr: *mut IVssEnumObject) -> Self {
+        Self(ptr)
+    }
+
+    fn as_ref(&self) -> Result<&IVssEnumObject> {
+        unsafe {
+            self.0.as_ref().ok_or_else(|| {
+                CollectorError::VssOperation("Null enum object pointer".into())
+            })
+        }
+    }
+}
+
+impl Drop for VssEnumObjectGuard {
+    fn drop(&mut self) {
+        unsafe {
+            if !self.0.is_null() {
+                (*self.0).Release();
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct VssSnapshot {
@@ -83,7 +141,7 @@ impl Vss {
         let snapshot_name = snapshot.snapshot_id().unwrap_or("unknown");
         let mount_point = dest_path.join(snapshot_name);
 
-        fs::symlink_dir(&snapshot.original_volume_name, &mount_point)
+        fs::symlink_dir(&snapshot.device_volume_name, &mount_point)
             .await
             .map_err(|e| CollectorError::VssMountFailed(format!("Symlink error: {}", e)))?;
 
@@ -136,10 +194,10 @@ fn list_all_snapshots() -> Result<Vec<VssSnapshot>> {
     let mut snapshots = Vec::new();
 
     unsafe {
-        let mut backup_components: *mut IVssBackupComponents = null_mut();
-        let mut enum_object: *mut IVssEnumObject = null_mut();
-        let mut prop: VSS_OBJECT_PROP = zeroed();
+        let mut backup_components_ptr: *mut IVssBackupComponents = null_mut();
+        let mut enum_object_ptr: *mut IVssEnumObject = null_mut();
 
+        // Initialize COM
         let hr = CoInitializeEx(null_mut(), COINITBASE_MULTITHREADED);
         check_hresult(hr, "CoInitializeEx")?;
 
@@ -156,36 +214,52 @@ fn list_all_snapshots() -> Result<Vec<VssSnapshot>> {
         );
         check_hresult(hr, "CoInitializeSecurity")?;
 
-        let hr = CreateVssBackupComponents(&mut backup_components);
+        // Create VSS backup components
+        let hr = CreateVssBackupComponents(&mut backup_components_ptr);
         if hr == E_ACCESSDENIED {
             return Err(CollectorError::InsufficientPrivileges);
         }
         check_hresult(hr, "CreateVssBackupComponents")?;
 
-        let backup = backup_components.as_ref().unwrap();
+        // Wrap in RAII guard for automatic cleanup
+        let backup_components = VssBackupComponentsGuard::new(backup_components_ptr);
+        let backup = backup_components.as_ref()?;
 
+        // Initialize backup
         check_hresult(
             backup.InitializeForBackup(null_mut()),
             "InitializeForBackup",
         )?;
-        check_hresult(backup.SetContext(VSS_CTX_ALL as i32), "SetContext")?;
+        
+        check_hresult(
+            backup.SetContext(VSS_CTX_ALL as i32),
+            "SetContext"
+        )?;
+        
         check_hresult(
             backup.SetBackupState(true, true, VSS_BT_FULL, false),
             "SetBackupState",
         )?;
+
+        // Query for snapshots
         check_hresult(
             backup.Query(
                 GUID_NULL,
                 VSS_OBJECT_NONE,
                 VSS_OBJECT_SNAPSHOT,
-                &mut enum_object,
+                &mut enum_object_ptr,
             ),
             "Query",
         )?;
 
-        let enum_obj = enum_object.as_ref().unwrap();
-        let mut fetched: u32 = 0;
+        // Wrap enum object in RAII guard
+        let enum_object = VssEnumObjectGuard::new(enum_object_ptr);
+        let enum_obj = enum_object.as_ref()?;
 
+        let mut fetched: u32 = 0;
+        let mut prop: VSS_OBJECT_PROP = zeroed();
+
+        // Iterate through snapshots
         loop {
             let hr = enum_obj.Next(1, &mut prop, &mut fetched);
 
@@ -193,19 +267,27 @@ fn list_all_snapshots() -> Result<Vec<VssSnapshot>> {
                 break;
             }
 
+            // Get snapshot properties
             let snap: &VSS_SNAPSHOT_PROP = prop.Obj.Snap();
             let mut snap_props: VSS_SNAPSHOT_PROP = zeroed();
 
-            if IVssBackupComponents::GetSnapshotProperties(
-                &*backup_components,
+            if backup.GetSnapshotProperties(
                 snap.m_SnapshotId,
                 &mut snap_props,
             ) == S_OK
             {
-                let original =
-                    U16CStr::from_ptr_str(snap_props.m_pwszOriginalVolumeName).to_string_lossy();
-                let device =
-                    U16CStr::from_ptr_str(snap_props.m_pwszSnapshotDeviceObject).to_string_lossy();
+                // Validate pointers before dereferencing
+                if snap_props.m_pwszOriginalVolumeName.is_null() 
+                    || snap_props.m_pwszSnapshotDeviceObject.is_null() 
+                {
+                    continue; // Skip invalid snapshot
+                }
+
+                // Convert wide strings to Rust strings
+                let original = U16CStr::from_ptr_str(snap_props.m_pwszOriginalVolumeName)
+                    .to_string_lossy();
+                let device = U16CStr::from_ptr_str(snap_props.m_pwszSnapshotDeviceObject)
+                    .to_string_lossy();
 
                 snapshots.push(VssSnapshot {
                     original_volume_name: original,
@@ -213,6 +295,8 @@ fn list_all_snapshots() -> Result<Vec<VssSnapshot>> {
                 });
             }
         }
+
+        // RAII guards will automatically release COM objects when they go out of scope
     }
 
     Ok(snapshots)

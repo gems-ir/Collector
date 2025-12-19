@@ -1,5 +1,3 @@
-//! VSS-aware collector (Windows only).
-
 #[cfg(target_os = "windows")]
 use std::path::PathBuf;
 

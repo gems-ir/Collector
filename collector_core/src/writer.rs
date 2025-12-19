@@ -1,5 +1,3 @@
-//! Output file management and ZIP creation.
-
 use std::io::Write;
 use std::path::{Path, PathBuf};
 

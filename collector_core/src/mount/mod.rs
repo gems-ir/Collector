@@ -1,5 +1,3 @@
-//! VSS support module (Windows only).
-
 #[cfg(target_os = "windows")]
 mod vss;
 

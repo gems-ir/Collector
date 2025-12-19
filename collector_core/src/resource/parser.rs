@@ -1,5 +1,3 @@
-//! Resource file parser (YAML).
-
 use glob::glob;
 use serde::Deserialize;
 use std::collections::HashSet;

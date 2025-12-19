@@ -1,5 +1,3 @@
-//! Fast and secure artifact collector for digital forensics.
-
 pub mod csv;
 pub mod error;
 pub mod platform;
@@ -21,7 +19,6 @@ pub mod prelude {
     pub use crate::writer::Writer;
 }
 
-// Re-exports for convenience
 pub use error::{CollectorError, Result};
 pub use platform::{ArtifactCollector, CollectionStats, VssCollector};
 pub use resource::{ResourcesParser, YamlParser};
