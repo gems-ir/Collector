@@ -1,5 +1,3 @@
-//! VSS implementation for Windows with improved safety.
-
 use std::ffi::OsString;
 use std::mem::zeroed;
 use std::os::windows::ffi::OsStringExt;

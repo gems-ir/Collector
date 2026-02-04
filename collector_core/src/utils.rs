@@ -128,42 +128,6 @@ pub fn is_admin() -> bool {
     }
 }
 
-// #[cfg(target_os = "windows")]
-// pub fn is_acdmin() -> bool {
-//     use std::mem;
-//     use windows::Win32::Foundation::HANDLE;
-//     use windows::Win32::Security::{
-//         GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY,
-//     };
-//     use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
-
-//     unsafe {
-//         let mut token: HANDLE = HANDLE::default();
-//         let mut elevation = TOKEN_ELEVATION { TokenIsElevated: 0 };
-//         let mut size: u32 = 0;
-
-//         let process = GetCurrentProcess();
-
-//         if OpenProcessToken(process, TOKEN_QUERY, &mut token).is_ok() {
-//             let result = GetTokenInformation(
-//                 token,
-//                 TokenElevation,
-//                 Some(&mut elevation as *mut _ as *mut _),
-//                 mem::size_of::<TOKEN_ELEVATION>() as u32,
-//                 &mut size,
-//             );
-
-//             // Fermer le handle du token
-//             let _ = windows::Win32::Foundation::CloseHandle(token);
-
-//             if result.is_ok() {
-//                 return elevation.TokenIsElevated != 0;
-//             }
-//         }
-//         false
-//     }
-// }
-
 
 #[cfg(target_os = "linux")]
 pub fn is_admin() -> bool {

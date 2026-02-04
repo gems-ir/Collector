@@ -11,10 +11,10 @@ keywords.workspace = true
 collector_core = { path = "../collector_core" }
 
 iced = { version = "0.14", features = ["tokio", "advanced", "svg", "image"] }
-tokio = { version = "1.48", features = ["full"] }
+tokio = { version = "1.49", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
-toml = "0.9.8"
-rfd = "0.16"
+toml = "0.9.11"
+rfd = "0.17"
 dark-light = "2.0"
 
 [build-dependencies]

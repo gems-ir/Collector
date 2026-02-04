@@ -10,23 +10,23 @@ keywords.workspace = true
 
 [dependencies]
 thiserror = "2.0"
-tokio = { version = "1.46.0", features = ["full"] }
-glob = "0.3.2"
+tokio = { version = "1.49.0", features = ["full"] }
+glob = "0.3.3"
 walkdir = "2.5.0"
-filetime = "0.2.25"
-serde = { version = "1.0.219", features = ["derive"] }
-serde_yml = "0.0.12"
+filetime = "0.2.27"
+serde = { version = "1.0.228", features = ["derive"] }
+yaml_serde = "0.10.3"
 
-ntfs = "0.4.0" # see if only ask on windpws
-sysinfo = "0.36.1"
-regex = "1.11.1"
-log = "0.4.27"
-uuid = { version = "1.17.0", features = ["fast-rng", "v4"] }
+ntfs = "0.4.0" # see if only ask on windows
+sysinfo = "0.38.0"
+regex = "1.12.3"
+log = "0.4.29"
+uuid = { version = "1.20.0", features = ["fast-rng", "v4"] }
 sha1 = "0.10.6"
 hex = "0.4.3"
-zip = { version = "4.3.0", features = ["aes-crypto", "_deflate-any"] }
+zip = { version = "7.2.0", features = ["aes-crypto", "_deflate-any"] }
 csv-async = { version = "1.3.1", features = ["tokio"] }
-chrono = "0.4.41"
+chrono = "0.4.43"
 
 
 [target.'cfg(windows)'.dependencies]
@@ -35,11 +35,11 @@ winapi = { version = "0.3.9", features = [
     "combaseapi", "impl-default", "fileapi", "securitybaseapi", 
     "processthreadsapi", "minwindef"
 ] }
-widestring = "1.2.0"
+widestring = "1.2.1"
 
 [target.'cfg(unix)'.dependencies]
-nix = { version = "0.30.1", features = ["user"] }
+nix = { version = "0.31.1", features = ["user"] }
 
 [dev-dependencies]
-tempfile = "3.14"
+tempfile = "3.24"
 tokio-test = "0.4"

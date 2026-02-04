@@ -74,7 +74,7 @@ impl ResourcesParser {
 
         let mut artifacts = Vec::new();
 
-        for document in serde_yml::Deserializer::from_str(&content) {
+        for document in yaml_serde::Deserializer::from_str(&content) {
             match YamlArtifact::deserialize(document) {
                 Ok(artifact) => {
                     if !artifact.metadata.target.matches_current_os() {
@@ -106,7 +106,7 @@ impl ResourcesParser {
         for (idx, content) in contents.iter().enumerate() {
             let filename = filenames.get(idx).map(|s| s.as_str()).unwrap_or("unknown");
 
-            for document in serde_yml::Deserializer::from_str(content) {
+            for document in yaml_serde::Deserializer::from_str(content) {
                 match YamlArtifact::deserialize(document) {
                     Ok(artifact) => {
                         if !artifact.metadata.target.matches_current_os() {
