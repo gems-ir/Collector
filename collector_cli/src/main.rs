@@ -130,6 +130,7 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
     setup_logging(&args, &log_filename)?;
 
     print_header();
+    let started_at = chrono::Utc::now();
 
     log::info!("{}", "=".repeat(50));
     log::info!("Source: {}", args.source);
@@ -149,7 +150,7 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
     print_separator();
 
     // Parse resources
-    println!("\n[1/4] Parsing resource files...");
+    println!("\n[1/5] Parsing resource files...");
     log::info!("Parsing resource files");
 
     let mut parser = ResourcesParser::new(&args.path_resources)?;
@@ -167,7 +168,7 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
     }
 
     // Create collector
-    println!("\n[2/4] Initializing collector...");
+    println!("\n[2/5] Initializing collector...");
     log::info!("Initializing collector");
 
     let mut collector =
@@ -178,11 +179,12 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
     log::info!("Found {} files to collect", total_files);
 
     // Collect
-    println!("\n[3/4] Collecting artifacts...");
+    println!("\n[3/5] Collecting artifacts...");
     log::info!("Starting collection");
 
     let timer = Instant::now();
-    let stats = collector.collect().await?;
+    #[cfg_attr(not(target_os = "windows"), allow(unused_mut))]
+    let mut stats = collector.collect().await?;
     let elapsed = timer.elapsed();
 
     println!(
@@ -208,7 +210,7 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
     // VSS collection (Windows only)
     #[cfg(target_os = "windows")]
     if args.vss {
-        println!("\n[3b/4] Collecting from VSS snapshots...");
+        println!("\n[3b/5] Collecting from VSS snapshots...");
         log::info!("Starting VSS collection");
 
         let mut vss_collector = VssCollector::new(&args.source, &args.destination, patterns);
@@ -229,6 +231,7 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
                     "VSS collection complete: {} files",
                     vss_stats.files_collected
                 );
+                stats.merge(&vss_stats);
             }
             Err(e) => {
                 println!("      VSS collection failed: {}", e);
@@ -237,16 +240,40 @@ async fn run_collection(args: ArgsCollector) -> Result<()> {
         }
     }
 
+    // Manifest
+    println!("\n[4/5] Writing collection manifest...");
+    log::info!("Writing collection manifest");
+
+    #[cfg(target_os = "windows")]
+    let vss_enabled = args.vss;
+    #[cfg(not(target_os = "windows"))]
+    let vss_enabled = false;
+
+    let header = ManifestHeader::new(
+        CollectionInfo::new(
+            started_at,
+            args.source.clone(),
+            args.resources.clone(),
+            vss_enabled,
+            args.zip,
+            args.zip && args.pass.is_some(),
+        ),
+        stats.clone(),
+    );
+    let listed = collector.writer().write_manifest(header).await?;
+    println!("      Manifest lists {} files", listed);
+    log::info!("Manifest written: {} files", listed);
+
     // ZIP
     if args.zip {
-        println!("\n[4/4] Creating ZIP archive...");
+        println!("\n[5/5] Creating ZIP archive...");
         log::info!("Creating ZIP archive");
 
         collector.create_archive(args.pass).await?;
         println!("      Archive created successfully");
         log::info!("Archive created");
     } else {
-        println!("\n[4/4] Skipping ZIP (not requested)");
+        println!("\n[5/5] Skipping ZIP (not requested)");
     }
 
     // Summary

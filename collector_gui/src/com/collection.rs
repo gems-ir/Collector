@@ -27,6 +27,8 @@ pub async fn run_collection(
     zip_pass: Option<String>,
     progress_sender: mpsc::UnboundedSender<CollectionProgress>,
 ) -> CollectionResult {
+    let started_at = chrono::Utc::now();
+    let selected_resources = resources.clone();
     // Parse resources
     let mut parser = match ResourcesParser::new(&resource_path) {
         Ok(p) => p,
@@ -76,7 +78,8 @@ pub async fn run_collection(
 
     // Collect with progress
     let sender = Arc::new(progress_sender);
-    let stats = {
+    #[cfg_attr(not(target_os = "windows"), allow(unused_mut))]
+    let mut stats = {
         let sender = sender.clone();
         match collector
             .collect_with_progress(move |current, total, path| {
@@ -103,18 +106,36 @@ pub async fn run_collection(
     #[cfg(target_os = "windows")]
     if vss_enabled {
         let mut vss_collector = VssCollector::new(&source, &destination, patterns);
-        if let Err(e) = vss_collector.collect_from_snapshots().await {
-            return CollectionResult {
-                success: false,
-                message: format!("VSS collection failed: {}", e),
-                // stats: None,
-            };
+        match vss_collector.collect_from_snapshots().await {
+            Ok(vss_stats) => stats.merge(&vss_stats),
+            Err(e) => {
+                return CollectionResult {
+                    success: false,
+                    message: format!("VSS collection failed: {}", e),
+                    // stats: None,
+                };
+            }
         }
     }
 
-    // Suppress unused variable warning on non-Windows
-    #[cfg(not(target_os = "windows"))]
-    let _ = vss_enabled;
+    // Manifest (before the archive, so that it is included)
+    let header = ManifestHeader::new(
+        CollectionInfo::new(
+            started_at,
+            source.clone(),
+            selected_resources,
+            vss_enabled,
+            zip_enabled,
+            zip_enabled && zip_pass.is_some(),
+        ),
+        stats.clone(),
+    );
+    if let Err(e) = collector.writer().write_manifest(header).await {
+        return CollectionResult {
+            success: false,
+            message: format!("Failed to write manifest: {}", e),
+        };
+    }
 
     // Zip if enabled
     if zip_enabled {

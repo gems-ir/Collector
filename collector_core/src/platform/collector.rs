@@ -1,22 +1,29 @@
 use std::io::Read;
 use std::path::PathBuf;
 
+use chrono::Utc;
 use filetime::FileTime;
 use glob::glob;
+use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
+use sha2::Sha256;
+use tokio::io::AsyncWriteExt;
 use tokio::task::spawn_blocking;
 
 use crate::csv::{CsvLogFile, CsvLogItem};
 use crate::error::{CollectorError, Result};
 use crate::extract::extract_file;
-use crate::utils::{FormatSource, HASH_BUFFER_SIZE, require_admin};
+use crate::manifest::{
+    ExtractionMethod, FileOrigin, FileRecord, ManifestRecorder, SourceTimes, to_rfc3339,
+};
+use crate::utils::{FormatSource, HASH_BUFFER_SIZE, normalize_path, require_admin};
 use crate::writer::Writer;
 
 #[cfg(target_os = "windows")]
 use crate::mount::VssSnapshot;
 
 /// Collection statistics
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CollectionStats {
     pub files_collected: u64,
     pub bytes_collected: u64,
@@ -44,6 +51,7 @@ pub struct ArtifactCollector {
     artifact_patterns: Vec<String>,
     writer: Writer,
     csv_logger: CsvLogFile,
+    manifest: ManifestRecorder,
     stats: CollectionStats,
     #[cfg(target_os = "windows")]
     vss_snapshot: Option<VssSnapshot>,
@@ -61,14 +69,19 @@ impl ArtifactCollector {
 
         let writer = Writer::new(&dest_path)?;
         let csv_path = writer.csv_log_path();
-        writer.create_file("Collector_copy.csv").await?;
+        // Only make sure the folder exists: the CSV and the manifest records are opened in
+        // append mode, so that the VSS collectors (one new collector per snapshot, same
+        // destination) add to what the live collection already wrote instead of erasing it.
+        writer.create_parent_dirs("Collector_copy.csv").await?;
         let csv_logger = CsvLogFile::new(&csv_path).await?;
+        let manifest = ManifestRecorder::open(writer.manifest_records_path()).await?;
 
         Ok(Self {
             source_directory: FormatSource::new(source_path),
             artifact_patterns: patterns,
             writer,
             csv_logger,
+            manifest,
             stats: CollectionStats::default(),
             #[cfg(target_os = "windows")]
             vss_snapshot: None,
@@ -171,6 +184,8 @@ impl ArtifactCollector {
     /// Process a single file
     async fn process_file(&mut self, source_path: &PathBuf) -> Result<()> {
         let relative_path = self.get_relative_path(source_path);
+        // Read the source timestamps before the copy, which may update the access time.
+        let source_times = SourceTimes::from_path(source_path);
         let mut output_file = self.writer.create_file(&relative_path).await?;
 
         #[cfg(target_os = "windows")]
@@ -179,6 +194,17 @@ impl ArtifactCollector {
 
         #[cfg(not(target_os = "windows"))]
         let (bytes, used_ntfs) = extract_file(source_path, &mut output_file, None).await?;
+
+        // tokio writes in the background: wait until the copy is fully written before its
+        // size and hashes are read, otherwise they may describe a partial file.
+        output_file
+            .flush()
+            .await
+            .map_err(|e| CollectorError::FileWrite {
+                path: self.writer.get_file_path(&relative_path),
+                source: e,
+            })?;
+        drop(output_file);
 
         self.stats.files_collected += 1;
         self.stats.bytes_collected += bytes;
@@ -189,9 +215,24 @@ impl ArtifactCollector {
             self.stats.filesystem_extractions += 1;
         }
 
-        self.log_extraction(source_path, &relative_path, used_ntfs)
+        self.log_extraction(source_path, &relative_path, used_ntfs, source_times)
             .await?;
         Ok(())
+    }
+
+    /// Identifier of the VSS snapshot being collected, if any.
+    fn vss_snapshot_id(&self) -> Option<String> {
+        #[cfg(target_os = "windows")]
+        {
+            self.vss_snapshot
+                .as_ref()
+                .and_then(|vss| vss.snapshot_id())
+                .map(str::to_string)
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            None
+        }
     }
 
     /// Get relative path for destination
@@ -209,12 +250,13 @@ impl ArtifactCollector {
         source_path.to_string_lossy().to_string()
     }
 
-    /// Log extraction to CSV
+    /// Log extraction to the CSV and to the manifest records
     async fn log_extraction(
         &mut self,
         source: &PathBuf,
         destination: &str,
         from_ntfs: bool,
+        source_times: Option<SourceTimes>,
     ) -> Result<()> {
         let dest_path = self.writer.get_file_path(destination);
 
@@ -226,30 +268,55 @@ impl ArtifactCollector {
         let mtime = FileTime::from_last_modification_time(&metadata);
         let atime = FileTime::from_last_access_time(&metadata);
 
-        // Hash computed in blocking thread (CPU-bound)
-        let hash = Self::calculate_hash_blocking(dest_path.clone()).await?;
+        // Hashes computed in a blocking thread (CPU-bound), in a single pass
+        let (sha1, sha256) = Self::calculate_hashes_blocking(dest_path.clone()).await?;
 
         let log_item = CsvLogItem::with_paths(
             source.to_string_lossy().to_string(),
             dest_path.to_string_lossy().to_string(),
         )
-        .with_hash(hash)
+        .with_hash(sha1.clone())
         .with_ntfs_flag(from_ntfs)
         .with_timestamps(mtime.to_string(), atime.to_string())
         .with_size(metadata.len());
 
-        self.csv_logger.add_row(log_item).await
+        self.csv_logger.add_row(log_item).await?;
+
+        let vss_snapshot = self.vss_snapshot_id();
+        let record = FileRecord {
+            source_path: source.to_string_lossy().to_string(),
+            archive_path: normalize_path(destination).replace('\\', "/"),
+            origin: if vss_snapshot.is_some() {
+                FileOrigin::Vss
+            } else {
+                FileOrigin::Live
+            },
+            vss_snapshot,
+            extraction: if from_ntfs {
+                ExtractionMethod::Ntfs
+            } else {
+                ExtractionMethod::Filesystem
+            },
+            size: metadata.len(),
+            sha1,
+            sha256,
+            collected_at: to_rfc3339(Utc::now()),
+            source_times,
+        };
+
+        self.manifest.record(&record).await
     }
 
-    /// Calculate SHA1 hash in a blocking thread (CPU-bound operation)
-    async fn calculate_hash_blocking(path: PathBuf) -> Result<String> {
+    /// Calculate SHA-1 and SHA-256 in one pass, in a blocking thread (CPU-bound operation)
+    async fn calculate_hashes_blocking(path: PathBuf) -> Result<(String, String)> {
         spawn_blocking(move || {
             let mut file = std::fs::File::open(&path).map_err(|e| CollectorError::FileRead {
                 path: path.clone(),
                 source: e,
             })?;
 
-            let mut hasher = Sha1::new();
+            let mut sha1 = Sha1::new();
+            let mut sha256 = Sha256::new();
             let mut buffer = [0u8; HASH_BUFFER_SIZE];
 
             loop {
@@ -264,10 +331,11 @@ impl ArtifactCollector {
                     break;
                 }
 
-                hasher.update(&buffer[..bytes_read]);
+                sha1.update(&buffer[..bytes_read]);
+                sha256.update(&buffer[..bytes_read]);
             }
 
-            Ok(hex::encode(hasher.finalize()))
+            Ok((hex::encode(sha1.finalize()), hex::encode(sha256.finalize())))
         })
         .await
         .map_err(|e| CollectorError::CollectionFailed(format!("Hash task failed: {}", e)))?

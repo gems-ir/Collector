@@ -122,6 +122,10 @@ pub enum CollectorError {
         destination: PathBuf,
         reason: String,
     },
+
+    // Manifest Errors
+    #[error("Manifest error: {0}")]
+    Manifest(String),
 }
 
 pub type Result<T> = std::result::Result<T, CollectorError>;
