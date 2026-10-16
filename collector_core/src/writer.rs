@@ -8,6 +8,7 @@ use walkdir::WalkDir;
 use zip::{AesMode, ZipWriter, write::SimpleFileOptions};
 
 use crate::error::{CollectorError, Result};
+use crate::manifest::{MANIFEST_FILE, MANIFEST_RECORDS_FILE, ManifestHeader, write_manifest_file};
 use crate::utils::{FormatSource, normalize_path};
 
 const ZIP_BUFFER_SIZE: usize = 4096;
@@ -195,6 +196,29 @@ impl Writer {
 
         log::info!("Created ZIP: {}", zip_path.display());
         Ok(())
+    }
+
+    /// Path of the temporary per-file manifest records.
+    pub fn manifest_records_path(&self) -> PathBuf {
+        self.get_file_path(MANIFEST_RECORDS_FILE)
+    }
+
+    /// Path of `Collector_manifest.json`.
+    pub fn manifest_path(&self) -> PathBuf {
+        self.get_file_path(MANIFEST_FILE)
+    }
+
+    /// Writes `Collector_manifest.json` from the recorded files and `header`, and removes
+    /// the temporary records. Must be called after every collector (live and VSS) has
+    /// finished and before [`Writer::create_archive`]. Returns the number of files listed.
+    pub async fn write_manifest(&self, header: ManifestHeader) -> Result<u64> {
+        let records = self.manifest_records_path();
+        let manifest = self.manifest_path();
+        self.create_parent_dirs(MANIFEST_FILE).await?;
+
+        tokio::task::spawn_blocking(move || write_manifest_file(&header, &records, &manifest))
+            .await
+            .map_err(|e| CollectorError::Manifest(format!("Manifest task failed: {}", e)))?
     }
 
     pub fn csv_log_path(&self) -> PathBuf {

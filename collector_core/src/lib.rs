@@ -1,5 +1,6 @@
 pub mod csv;
 pub mod error;
+pub mod manifest;
 pub mod platform;
 pub mod resource;
 pub mod utils;
@@ -13,6 +14,7 @@ pub mod mount;
 pub mod prelude {
     pub use crate::csv::{CsvLogFile, CsvLogItem};
     pub use crate::error::{CollectorError, Result};
+    pub use crate::manifest::{CollectionInfo, Manifest, ManifestHeader};
     pub use crate::platform::{ArtifactCollector, CollectionStats, VssCollector};
     pub use crate::resource::{ResourcesParser, YamlArtifact, YamlParser};
     pub use crate::utils::{FormatSource, is_admin, require_admin};

@@ -107,6 +107,12 @@ impl CsvLogFile {
             .serialize(item)
             .await
             .map_err(|e| CollectorError::CsvError(format!("Failed to write row: {}", e)))?;
+        // Flush every row: the archive may be created while this logger is still alive,
+        // and buffered rows would be missing from it.
+        self.csv_writer
+            .flush()
+            .await
+            .map_err(|e| CollectorError::CsvError(format!("Failed to flush CSV: {}", e)))?;
         Ok(())
     }
 
